@@ -12,13 +12,9 @@ def adjustIntensity(inImage, inRange=None, outRange=[0, 1]):
     omin, omax = outRange
     
     outImage = (((inImage - imin) / (imax - imin)) * (omax - omin)) + omin
-    
-    outmin = np.min(outImage)
-    outmax = np.max(outImage)
-    if outmin < imin:
-        imin = outmin
-    if outmax > imax:
-        imax = outmax
+
+    outImage[outImage < imin] = imin
+    outImage[outImage > imax] = imax
 
     return outImage
 
@@ -39,21 +35,27 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-original_img = io.imread('perro.jpg')
+inImage = io.imread('imagenes-hist/perro.jpg')
 
-if len(original_img.shape) == 2:
-    img = original_img.astype(float) / 255.0
-else:
-    img = color.rgb2gray(original_img).astype(float)
+def black_and_white(img):
+    if len(img.shape) == 2:
+        img = img.astype(float) / 255.0
+    elif len(img.shape) == 3:
+        if img.shape[2] == 4:  
+            img = img[:, :, :3] 
+        img = color.rgb2gray(img).astype(float)
+    return img
 
-# outImage = adjustIntensity(img, inRange=[0,1], outRange=[0, 0.5])
-outImage = equalizeIntensity(img, nBins=256)
+inImageBW = black_and_white(inImage)
 
-saveImage(outImage, 'imagen_ajustada.jpg')
+# outImage = adjustIntensity(inImageBW, inRange=[0,1], outRange=[0, 0.5])
+outImage = equalizeIntensity(inImageBW, nBins=256)
+
+saveImage(outImage, 'imagenes-hist/imagen_guardada_equalizeIntensity.jpg')
 
 # Histograma de la imagen original
 plt.subplot(1, 2, 1)
-plt.hist(img.ravel(), bins=256, range=(0, 1), color='blue', alpha=0.7)
+plt.hist(inImageBW.ravel(), bins=256, range=(0, 1), color='blue', alpha=0.7)
 plt.title('Histograma original')
 
 # Histograma de la imagen ajustada
@@ -64,7 +66,7 @@ plt.title('Histograma ajustado')
 # Imágenes
 plt.figure()
 plt.subplot(1, 2, 1)
-io.imshow(img, cmap='gray') 
+io.imshow(inImageBW, cmap='gray') 
 plt.title('Imagen original')
 plt.subplot(1, 2, 2)
 io.imshow(outImage, cmap='gray')

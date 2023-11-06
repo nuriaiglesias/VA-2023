@@ -2,6 +2,8 @@ import numpy as np
 from skimage import io
 from skimage import color
 import matplotlib.pyplot as plt
+from scipy.signal import convolve2d
+
 
 def filterImage(inImage, kernel):
     height, width = inImage.shape
@@ -49,19 +51,38 @@ def gaussianFilter(inImage, sigma):
 
     return outImage
 
+def gradientImage(inImage, operator):
+    if operator == 'Roberts':
+        # Operador de Roberts
+        gx_kernel = np.array([[-1, 0], [0, 1]])
+        gy_kernel = np.array([[0, -1], [1, 0]])
+    elif operator == 'CentralDiff':
+        # Operador de Diferencias Centrales
+        gx_kernel = np.array([-1, 0, 1])
+        gy_kernel = gx_kernel.reshape(1, -1)
+    elif operator == 'Prewitt':
+        # Operador de Prewitt
+        gx_kernel = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
+        gy_kernel = gx_kernel.T 
+    elif operator == 'Sobel':
+        # Operador de Sobel
+        gx_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+        gy_kernel = gx_kernel.T
+    else:
+        raise ValueError("Operador no válido. Debe ser 'Roberts', 'CentralDiff', 'Prewitt' o 'Sobel'.")
 
-def medianFilter(inImage, filterSize):
-    offset = filterSize // 2
-    height, width = inImage.shape
-    outImage = np.zeros_like(inImage)
+    gx = filterImage(inImage, gx_kernel)
+    gy = filterImage(inImage, gy_kernel)
+    
+    return gx, gy
 
-    for y in range(offset, height - offset):
-        for x in range(offset, width - offset):
-            window = inImage[y - offset:y + offset + 1, x - offset:x + offset + 1]
-            outImage[y, x] = np.median(window)
-
-    return outImage
-
+def LoG(inImage, sigma):
+    laplacian_kernel = np.array([[-1, -1, -1],
+                 [-1, 8, -1],
+                 [-1, -1, -1]])
+    gaussian_image = gaussianFilter(inImage,sigma)
+    laplacian_result = filterImage(gaussian_image, laplacian_kernel)
+    return laplacian_result
 
 def black_and_white(img):
     if len(img.shape) == 2:
@@ -76,56 +97,20 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-img_input = io.imread('imagenes-conv/lena-mediana.png')
-# kernel = io.imread('imagenes-conv/kernel.jpg')
-# kernel = np.array([[1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
+inImage = io.imread('circles.png')
 
-# img_input = np.zeros([150,150])
-# img_input[60,60] = 1
+inImage = black_and_white(inImage)
 
-img_input_bw = black_and_white(img_input)
-# kernel_bw = black_and_white(kernel)
+# gx, gy = gradientImage(inImage, 'Roberts')
 
-# Comprobación FILTERIMAGE
-# outImage = filterImage(img_input_bw, kernel_bw)
+outImage = LoG(inImage, 10)
 
-# Comprobación GAUSSKERNEL1D
-# sigma = 15
-# kernel = gaussKernel1D(sigma)
-
-# plt.plot(kernel, label=f'Sigma={sigma}')
-# plt.xlabel('Posición')
-# plt.ylabel('Valor del Kernel')
-# plt.title(f'Kernel Gaussiano 1D para Sigma={sigma}')
-# plt.legend()
-# plt.show()
-
-# Comprobación GAUSSIANFILTER
-# sigma = 15
-# outImage = gaussianFilter(img_input_bw,sigma)
-
-# Comprobación MEDIANFILTER
-outImage = medianFilter(img_input_bw, 3)
-
-min = np.min(outImage)
-max = np.max(outImage)
-outImage = (outImage - min) / (max - min)
-saveImage(outImage, 'imagenes-conv/imagen_guardada_gaussianfilter.jpg')
-
-# # Mostrar imágenes
 plt.figure()
 plt.subplot(1, 2, 1)
-plt.imshow(img_input_bw, cmap='gray') 
+io.imshow(inImage, cmap='gray') 
 plt.title('Imagen de entrada')
 plt.subplot(1, 2, 2)
-plt.imshow(outImage, cmap='gray')
+io.imshow(outImage, cmap='gray')
 plt.title('Imagen resultante')
 
 plt.show()
-
