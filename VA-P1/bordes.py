@@ -2,7 +2,9 @@ import numpy as np
 from skimage import io
 from skimage import color
 import matplotlib.pyplot as plt
-from scipy.signal import convolve2d
+import math
+from skimage import measure
+
 
 
 def filterImage(inImage, kernel):
@@ -53,19 +55,15 @@ def gaussianFilter(inImage, sigma):
 
 def gradientImage(inImage, operator):
     if operator == 'Roberts':
-        # Operador de Roberts
         gx_kernel = np.array([[-1, 0], [0, 1]])
         gy_kernel = np.array([[0, -1], [1, 0]])
     elif operator == 'CentralDiff':
-        # Operador de Diferencias Centrales
-        gx_kernel = np.array([-1, 0, 1])
-        gy_kernel = gx_kernel.reshape(1, -1)
+        gx_kernel = np.array([[-1, 0, 1]])
+        gy_kernel = gx_kernel.T
     elif operator == 'Prewitt':
-        # Operador de Prewitt
         gx_kernel = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
         gy_kernel = gx_kernel.T 
     elif operator == 'Sobel':
-        # Operador de Sobel
         gx_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
         gy_kernel = gx_kernel.T
     else:
@@ -84,6 +82,76 @@ def LoG(inImage, sigma):
     laplacian_result = filterImage(gaussian_image, laplacian_kernel)
     return laplacian_result
 
+def edgeCanny(inImage, sigma, tlow, thigh):
+    smoothed_image = gaussianFilter(inImage, sigma)
+
+    gx, gy = gradientImage(smoothed_image, 'Sobel')
+
+    magnitude = np.sqrt(gx**2 + gy**2)
+    direction = np.arctan2(gy, gx)
+
+    # Supresión no máxima
+    height, width = inImage.shape
+    suppressed_image = np.zeros((height, width), dtype=np.float32)
+
+    for i in range(1, height - 1):
+        for j in range(1, width - 1):
+            angle = math.degrees(direction[i, j]) 
+            if(angle < 0):
+                angle += 180
+            # print(angle)
+            # FILA
+            if(angle >= 0 and angle < 22.5) or (angle >= 157.5 and angle <= 180):
+                if (magnitude[i, j] >= magnitude[i, j + 1]) and (magnitude[i, j] >= magnitude[i, j - 1]):
+                    suppressed_image[i, j] = magnitude[i, j]
+                else: 
+                    suppressed_image[i, j] = 0
+            # DIAGONAL DELANTE
+            elif(angle >= 22.5 and angle < 67.5):
+                if (magnitude[i, j] >= magnitude[i + 1, j + 1]) and (magnitude[i, j] >= magnitude[i - 1, j - 1]):
+                    suppressed_image[i, j] = magnitude[i, j]
+                else: 
+                    suppressed_image[i, j] = 0
+            # DIAGONAL DETRAS
+            elif(angle >= 112.5 and angle < 157.5):
+                if (magnitude[i, j] >= magnitude[i + 1, j - 1]) and (magnitude[i, j] >= magnitude[i - 1, j + 1]):
+                    suppressed_image[i, j] = magnitude[i, j]
+                else: 
+                    suppressed_image[i, j] = 0
+            # COLUMNA
+            elif(angle >= 67.5 and angle < 112.5):
+                if (magnitude[i, j] >= magnitude[i - 1, j]) and (magnitude[i, j] >= magnitude[i + 1, j]):
+                    suppressed_image[i, j] = magnitude[i, j]
+                else: 
+                    suppressed_image[i, j] = 0
+
+    #Normalización por histéresis
+    strong_edges = (suppressed_image > thigh)
+    weak_edges = (suppressed_image >= tlow) & (suppressed_image <= thigh)
+    weakest_edges = (suppressed_image < tlow)
+    suppressed_image = np.where(strong_edges, 1, suppressed_image)
+    suppressed_image = np.where(weakest_edges, 0, suppressed_image)
+   
+    while True:
+        prev_suppressed = np.copy(suppressed_image)
+        
+        for i in range(1, height - 1):
+            for j in range(1, width - 1):
+                if weak_edges[i, j]:
+                    if np.any(strong_edges[i-1:i+2, j-1:j+2]):
+                        suppressed_image[i, j] = 1
+                    else:
+                        suppressed_image[i, j] = 0
+        
+        strong_edges = (suppressed_image > thigh)
+        weak_edges = (suppressed_image >= tlow) & (suppressed_image <= thigh)
+
+        if np.array_equal(prev_suppressed, suppressed_image):
+            break
+            
+
+    return suppressed_image
+
 def black_and_white(img):
     if len(img.shape) == 2:
         img = img.astype(float) / 255.0
@@ -97,20 +165,24 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('circles.png')
+inImage = io.imread('imagenes-bordes/circles1.png')
 
 inImage = black_and_white(inImage)
 
-# gx, gy = gradientImage(inImage, 'Roberts')
+# gx, gy = gradientImage(inImage, 'Prewitt')
 
-outImage = LoG(inImage, 10)
+# outImage = LoG(inImage, 0.5)
+
+outImage = edgeCanny(inImage, 0.3, 0.1, 0.9)
 
 plt.figure()
 plt.subplot(1, 2, 1)
-io.imshow(inImage, cmap='gray') 
+plt.imshow(inImage, cmap='gray') 
 plt.title('Imagen de entrada')
 plt.subplot(1, 2, 2)
-io.imshow(outImage, cmap='gray')
+plt.imshow(outImage, cmap='gray')
 plt.title('Imagen resultante')
-
+# plt.subplot(1, 3, 3)
+# plt.imshow(gy, cmap='gray')
+# plt.title('gy')
 plt.show()
