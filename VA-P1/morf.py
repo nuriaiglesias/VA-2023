@@ -78,12 +78,8 @@ def hit_or_miss(inImage, objSEj, bgSE, center=[]):
         return None
 
     eroded_obj = erode(inImage, objSEj, center)
-    print("eroded_obj")
-    print(eroded_obj)
     inverted_image = 1 - inImage
     eroded_bg = erode(inverted_image, bgSE, center)
-    print("eroded_bg")
-    print(eroded_bg)
     outImage = eroded_obj * eroded_bg
 
     return outImage
