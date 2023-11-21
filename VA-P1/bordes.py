@@ -128,13 +128,14 @@ def edgeCanny(inImage, sigma, tlow, thigh):
     #Umbralización por histéresis
     strong_edges = (suppressed_image > thigh)
     weak_edges = (suppressed_image >= tlow) & (suppressed_image <= thigh)
-    # weakest_edges = (suppressed_image < tlow)
     suppressed_image = np.where(strong_edges, 1, suppressed_image)
-    # suppressed_image = np.where(weakest_edges, 0, suppressed_image)
     while True:
         prev_suppressed = np.copy(suppressed_image)
         for i in range(1, height - 1):
             for j in range(1, width - 1):
+                angle = math.degrees(direction[i, j])
+                if(angle < 0):
+                    angle += 180
                 if weak_edges[i, j]:
                     neighbors = [suppressed_image[i - 1, j], suppressed_image[i + 1, j], suppressed_image[i + 1, j - 1], suppressed_image[i - 1, j + 1], suppressed_image[i + 1, j + 1], suppressed_image[i - 1, j - 1], suppressed_image[i, j - 1],suppressed_image[i, j + 1]]
                     max_neighbor_value = max(neighbors)
@@ -165,6 +166,8 @@ def cornerSusan(inImage, r, t):
 
     max_usan = np.sum(mask) 
 
+    g = 3/4 * max_usan  
+
     for y in range(r, height - r):
         for x in range(r, width - r):
             core_intensity = inImage[y, x]
@@ -177,10 +180,11 @@ def cornerSusan(inImage, r, t):
 
             usanArea[y, x] = usan / max_usan 
 
-            if usan / max_usan < t:
-                outCorners[y, x] = 1  
+            if usan < g:
+                outCorners[y, x] = g - usan
 
     return outCorners, usanArea
+
 
 def black_and_white(img):
     if len(img.shape) == 2:
@@ -195,7 +199,7 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('imagenes-bordes/circles1.png')
+inImage = io.imread('imagenes-bordes/cuadrado.jpeg')
 
 inImage = black_and_white(inImage)
 
@@ -205,42 +209,43 @@ inImage = black_and_white(inImage)
 # se me va hacia arriba, se me va hacia abajo; se me va hacia la izq
 # region_of_interest = inImage[170:200, 180:210]
 
-outImage = edgeCanny(inImage, 0.3, 0.1, 0.8)
+# outImage = edgeCanny(inImage, 0.3, 0.01, 0.3)
 
-# radius = 10
-# threshold = 0.6
-# corners, usan_area = cornerSusan(inImage, radius, threshold)
+radius = 10
+threshold = 0.6
+corners, usan_area = cornerSusan(inImage, radius, threshold)
 
 
 # saveImage(outImage, 'imagenes-bordes/imagen_guardada_circle12.jpg')
 # Visualizar el mapa de esquinas
-# plt.figure(figsize=(8, 6))
+plt.figure(figsize=(8, 6))
 
-# plt.subplot(1, 3, 1)
-# plt.imshow(inImage, cmap='gray')
-# plt.title('Imagen original')
-# plt.axis('off')
+plt.subplot(1, 3, 1)
+plt.imshow(inImage, cmap='gray')
+plt.title('Imagen original')
+plt.axis('off')
 
-# plt.subplot(1, 3, 2)
-# plt.imshow(corners, cmap='gray')
-# plt.title('Mapa de esquinas')
-# plt.axis('off')
+plt.subplot(1, 3, 2)
+plt.imshow(corners, cmap='gray')
+plt.title('Mapa de esquinas')
+plt.axis('off')
 
-# plt.subplot(1, 3, 3)
-# plt.imshow(usan_area, cmap='gray')
-# plt.title('usanArea')
-# plt.axis('off')
+plt.subplot(1, 3, 3)
+plt.imshow(usan_area, cmap='gray')
+plt.title('usanArea')
+plt.axis('off')
 
-# plt.tight_layout()
-# plt.show()
-plt.figure()
-plt.subplot(1, 2, 1)
-io.imshow(inImage, cmap='gray') 
-plt.title('Imagen de entrada')
-plt.subplot(1, 2, 2)
-io.imshow(outImage, cmap='gray')
-plt.title('Imagen resultante')
-# plt.subplot(1, 3, 3)
-# plt.imshow(gy, cmap='gray')
-# plt.title('gy')
+plt.tight_layout()
 plt.show()
+
+# plt.figure()
+# plt.subplot(1, 2, 1)
+# io.imshow(inImage, cmap='gray') 
+# plt.title('Imagen de entrada')
+# plt.subplot(1, 2, 2)
+# io.imshow(outImage, cmap='gray')
+# plt.title('Imagen resultante')
+# # plt.subplot(1, 3, 3)
+# # plt.imshow(gy, cmap='gray')
+# # plt.title('gy')
+# plt.show()
