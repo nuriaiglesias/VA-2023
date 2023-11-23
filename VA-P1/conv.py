@@ -65,7 +65,10 @@ def medianFilter(inImage, filterSize):
 
 def black_and_white(img):
     if len(img.shape) == 2:
-        img = img.astype(float) / 255.0
+        min = np.min(img)
+        max = np.max(img)
+        img = (img - min) / (max - min)
+        img = img.astype(float)
     elif len(img.shape) == 3:
         if img.shape[2] == 4:  
             img = img[:, :, :3] 
@@ -76,24 +79,21 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-img_input = io.imread('imagenes-conv/lena-mediana.png')
-# kernel = io.imread('imagenes-conv/kernel.jpg')
+img_input = io.imread('raya-y-puntos.jpeg')
+# kernel = io.imread('khalo.jpeg')
 # kernel = np.array([[1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1],
-#                                  [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
+#                     [1, 1, 1, 1, 1, 1, 1],
+#                     [1, 1, 1, 1, 1, 1, 1],
+#                     [1, 1, 1, 1, 1, 1, 1],
+#                     [1, 1, 1, 1, 1, 1, 1],
+#                     [1, 1, 1, 1, 1, 1, 1],
+#                     [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
 
 # img_input = np.zeros([150,150])
 # img_input[60,60] = 1
 
 img_input_bw = black_and_white(img_input)
 # kernel_bw = black_and_white(kernel)
-
-# Comprobación FILTERIMAGE
-# outImage = filterImage(img_input_bw, kernel_bw)
 
 # Comprobación GAUSSKERNEL1D
 # sigma = 15
@@ -104,27 +104,33 @@ img_input_bw = black_and_white(img_input)
 # plt.ylabel('Valor del Kernel')
 # plt.title(f'Kernel Gaussiano 1D para Sigma={sigma}')
 # plt.legend()
+# plt.grid()
 # plt.show()
 
+
+# Comprobación FILTERIMAGE
+# outImage = filterImage(img_input, kernel_bw)
+
 # Comprobación GAUSSIANFILTER
-# sigma = 15
+# sigma = 2
 # outImage = gaussianFilter(img_input_bw,sigma)
 
 # Comprobación MEDIANFILTER
-outImage = medianFilter(img_input_bw, 3)
+outImage = medianFilter(img_input_bw, 7)
 
-min = np.min(outImage)
-max = np.max(outImage)
-outImage = (outImage - min) / (max - min)
+# min = np.min(outImage)
+# max = np.max(outImage)
+# outImage = (outImage - min) / (max - min)
 saveImage(outImage, 'imagenes-conv/imagen_guardada_gaussianfilter.jpg')
 
-# # Mostrar imágenes
-plt.figure()
+
+# Mostrar imágenes
+plt.figure(1,2)
 plt.subplot(1, 2, 1)
-plt.imshow(img_input_bw, cmap='gray') 
+plt.imshow(img_input, cmap='gray',vmin=0.0,vmax=1.0) 
 plt.title('Imagen de entrada')
 plt.subplot(1, 2, 2)
-plt.imshow(outImage, cmap='gray')
+plt.imshow(outImage, cmap='gray',vmin=0.0,vmax=1.0)
 plt.title('Imagen resultante')
 
 plt.show()

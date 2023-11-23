@@ -11,7 +11,7 @@ def erode(inImage, SE, center=[]):
 
     P, Q = SE.shape
     M, N = inImage.shape
-    outImage = np.zeros((M, N), dtype=np.uint8)
+    outImage = np.zeros((M, N), dtype=np.float32)
 
     for i in range(M):
         for j in range(N):
@@ -40,7 +40,7 @@ def dilate(inImage, SE, center=[]):
 
     P, Q = SE.shape
     M, N = inImage.shape
-    outImage = np.zeros((M, N), dtype=np.uint8)
+    outImage = np.zeros((M, N), dtype=np.float32)
 
     for i in range(M):
         for j in range(N):
@@ -73,7 +73,7 @@ def hit_or_miss(inImage, objSEj, bgSE, center=[]):
         print("Error: elementos estructurantes incoherentes")
         return None
 
-    if np.logical_and(objSEj, bgSE).any():
+    if (objSEj * bgSE).any():
         print("Error: elementos estructurantes incoherentes")
         return None
 
@@ -97,7 +97,7 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('animo-xoel.jpeg')
+inImage = io.imread('image.png')
 inImage = black_and_white(inImage)
 
 umbral = 0.5 
@@ -117,9 +117,9 @@ inImage_binary = (inImage > umbral).astype(float)
 #               [0, 1, 1, 1, 1, 0],
 #               [0, 0, 0, 0, 0, 0]], dtype=np.uint8)
 
-# SE = np.array([[1, 1, 1],
-#                [0, 0, 0],
-#                [1, 1, 1]])
+SE = np.array([[1, 1, 1],
+               [1, 1, 1],
+               [1, 1, 1]])
 
 # SE = np.array([[0, 0, 1, 1, 1, 0, 0]])
 
@@ -153,24 +153,6 @@ inImage_binary = (inImage > umbral).astype(float)
 
 # plt.tight_layout()
 
-# # Realizar la apertura y el cierre con scikit-image
-# opened_image = morphology.opening(inImage_binary, footprint=SE)
-# closed_image = morphology.closing(binarized, footprint=SE)
-
-# Visualizar las imágenes
-# plt.figure(figsize=(10, 5))
-# plt.subplot(1, 3, 1)
-# plt.title("Imagen Binarizada")
-# io.imshow(binarized, cmap='gray')
-
-# plt.subplot(1, 3, 2)
-# plt.title("Apertura")
-# io.imshow(opened_image, cmap='gray')
-
-# plt.subplot(1, 3, 3)
-# plt.title("Cierre")
-# io.imshow(closed_image, cmap='gray')
-
 # plt.show()
 
 # Definir los elementos estructurantes
@@ -190,11 +172,31 @@ inImage_binary = (inImage > umbral).astype(float)
 #                    [0, 0, 0, 1, 0, 0],
 #                    [0, 0, 0, 0, 0, 0]])
 
-# # Aplicar la transformada Hit-or-Miss
-# outImage = hit_or_miss(inImage, objSEj, bgSE, center=(1,1))
+objSE = np.array([         [0, 0, 0],
+                           [0, 1, 1],
+                           [0, 0, 0]])
+bgSE = np.array([        [0, 0, 0],
+                         [1, 0, 0],
+                         [1, 1, 0]])
 
-# # Imprimir la imagen resultante
+# Aplicar la transformada Hit-or-Miss
+outImage = hit_or_miss(inImage, objSE, bgSE)
+
+# Imprimir la imagen resultante
 # print("Imagen de entrada:")
 # print(inImage)
 # print("\nImagen de salida (Transformada Hit-or-Miss):")
 # print(outImage)
+
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 2, 1)
+plt.imshow(inImage, cmap='gray', vmin=0.0, vmax=1.0)
+plt.title('Imagen de entrada')
+
+plt.subplot(1, 2, 2)
+plt.imshow(outImage, cmap='gray', vmin=0.0, vmax=1.0)
+plt.title('Imagen resultante')
+
+plt.tight_layout()
+plt.show()

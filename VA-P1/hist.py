@@ -4,6 +4,7 @@ from skimage import color
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
+# Alteración rango dinámico
 def adjustIntensity(inImage, inRange=None, outRange=[0, 1]):
     if inRange is None:
         inRange = [np.min(inImage), np.max(inImage)]
@@ -11,31 +12,38 @@ def adjustIntensity(inImage, inRange=None, outRange=[0, 1]):
     imin, imax = inRange
     omin, omax = outRange
     
+    # Ajuste del rango dinámico a outRange
+    # (((ecuación de la recta) / rango de entrada) * (rango de salida)) + se coloca en su sitio
     outImage = (((inImage - imin) / (imax - imin)) * (omax - omin)) + omin
 
+    # Asegura rango de salida entre imin, imax
     outImage[outImage < imin] = imin
     outImage[outImage > imax] = imax
 
     return outImage
 
+# Ecualización del histograma
 def equalizeIntensity(inImage, nBins=256):
-    hist, bin_edges = np.histogram(inImage, bins=nBins, range=(0, 1))
+    # Calculo del histograma
+    # nBins es el número de divisiones para el hist
+    histogram_values, bin_divisions = np.histogram(inImage, bins=nBins, range=(0, 1))
 
-    cdf = hist.cumsum()
+    # Calculo histograma acumulado
+    accumulated_histogram = histogram_values.cumsum()
+    
+    # Normalizacion para estar en rango [0,1]
+    accumulated_hist_normalized = accumulated_histogram / accumulated_histogram[-1]
 
-    cdf_normalized = cdf / cdf[-1]
+    # Interpolación: crea una "línea" basada en los bins y sus alturas (cdf_normalized), para predecir alturas en el eje x de puntos no marcados
+    interp_algorithm = interp1d(bin_divisions[:-1], accumulated_hist_normalized, kind='linear', fill_value='extrapolate')
 
-    interp_func = interp1d(bin_edges[:-1], cdf_normalized, kind='linear', fill_value='extrapolate')
-
-    outImage = interp_func(inImage)
+    outImage = interp_algorithm(inImage)
 
     return outImage
 
 def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
-
-inImage = io.imread('imagenes-hist/perro.jpg')
 
 def black_and_white(img):
     if len(img.shape) == 2:
@@ -46,31 +54,29 @@ def black_and_white(img):
         img = color.rgb2gray(img).astype(float)
     return img
 
+inImage = io.imread('imagenes-hist/gato.jpeg')
 inImageBW = black_and_white(inImage)
 
-# outImage = adjustIntensity(inImageBW, inRange=[0,1], outRange=[0, 0.5])
+# Rango bajo implica más oscura, menos contraste
+# Rango alto implica más brillante, más contraste
+# outImage = adjustIntensity(inImageBW, outRange=[0.2, 0.3])
 outImage = equalizeIntensity(inImageBW, nBins=256)
 
-saveImage(outImage, 'imagenes-hist/imagen_guardada_equalizeIntensity.jpg')
+saveImage(outImage, 'imagenes-hist/img_saved_adjustIntensity.jpg')
 
-# Histograma de la imagen original
+# Histogramas
 plt.subplot(1, 2, 1)
 plt.hist(inImageBW.ravel(), bins=256, range=(0, 1), color='blue', alpha=0.7)
 plt.title('Histograma original')
-
-# Histograma de la imagen ajustada
 plt.subplot(1, 2, 2)
 plt.hist(outImage.ravel(), bins=256, range=(0, 1), color='red', alpha=0.7)
 plt.title('Histograma ajustado')
-
 # Imágenes
 plt.figure()
 plt.subplot(1, 2, 1)
-io.imshow(inImageBW, cmap='gray') 
+plt.imshow(inImageBW, cmap='gray',vmin=0.0,vmax=1.0) 
 plt.title('Imagen original')
 plt.subplot(1, 2, 2)
-io.imshow(outImage, cmap='gray')
+plt.imshow(outImage, cmap='gray',vmin=0.0,vmax=1.0)
 plt.title('Imagen ajustada')
-
 plt.show()
-

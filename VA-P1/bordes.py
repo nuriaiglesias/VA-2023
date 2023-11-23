@@ -124,31 +124,39 @@ def edgeCanny(inImage, sigma, tlow, thigh):
                     suppressed_image[i, j] = magnitude[i, j]
                 else: 
                     suppressed_image[i, j] = 0
-
-    #Umbralización por histéresis
-    strong_edges = (suppressed_image > thigh)
+    # Umbralización por histéresis
+    strong_edges = suppressed_image > thigh
     weak_edges = (suppressed_image >= tlow) & (suppressed_image <= thigh)
-    suppressed_image = np.where(strong_edges, 1, suppressed_image)
-    while True:
-        prev_suppressed = np.copy(suppressed_image)
-        for i in range(1, height - 1):
-            for j in range(1, width - 1):
-                angle = math.degrees(direction[i, j])
-                if(angle < 0):
-                    angle += 180
-                if weak_edges[i, j]:
-                    neighbors = [suppressed_image[i - 1, j], suppressed_image[i + 1, j], suppressed_image[i + 1, j - 1], suppressed_image[i - 1, j + 1], suppressed_image[i + 1, j + 1], suppressed_image[i - 1, j - 1], suppressed_image[i, j - 1],suppressed_image[i, j + 1]]
-                    max_neighbor_value = max(neighbors)
-                    if max_neighbor_value == 1:
-                        suppressed_image[i, j] = 1
+    edge_image = np.zeros((height, width), dtype=np.uint8)
+    visited = np.zeros((height, width), dtype=bool)
 
-        strong_edges = (suppressed_image > thigh)
-        weak_edges = (suppressed_image >= tlow) & (suppressed_image <= thigh)
+    for i in range(height):
+        for j in range(width):
+            if strong_edges[i, j] and not visited[i, j]:
+                edge_image[i, j] = 255  # Marcar como borde fuerte
+                visited[i, j] = True
 
-        if np.array_equal(prev_suppressed, suppressed_image):
-            break
-    suppressed_image[suppressed_image < 1] = 0
-    return suppressed_image
+                stack = [(i, j)]
+                while stack:
+                    current_i, current_j = stack.pop()
+                    for di in range(-1, 2):
+                        for dj in range(-1, 2):
+                            ni, nj = current_i + di, current_j + dj
+                            if 0 <= ni < height and 0 <= nj < width and not visited[ni, nj]:
+                                if weak_edges[ni, nj]:
+                                    # Verificar la dirección del borde
+                                    angle = math.degrees(direction[ni, nj])
+                                    if angle < 0:
+                                        angle += 180
+                                    edge_angle = math.degrees(direction[current_i, current_j])
+                                    if edge_angle < 0:
+                                        edge_angle += 180
+                                    if abs(edge_angle - angle) < 45 or abs(edge_angle - angle) > 135:
+                                        edge_image[ni, nj] = 255
+                                        visited[ni, nj] = True
+                                        stack.append((ni, nj))
+
+    return edge_image
 
 def cornerSusan(inImage, r, t):
     outCorners = np.zeros_like(inImage)
@@ -199,7 +207,7 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('imagenes-bordes/cuadrado.jpeg')
+inImage = io.imread('imagenes-bordes/lena.png')
 
 inImage = black_and_white(inImage)
 
@@ -209,43 +217,40 @@ inImage = black_and_white(inImage)
 # se me va hacia arriba, se me va hacia abajo; se me va hacia la izq
 # region_of_interest = inImage[170:200, 180:210]
 
-# outImage = edgeCanny(inImage, 0.3, 0.01, 0.3)
+outImage = edgeCanny(inImage, 0.3, 0.1, 0.8)
 
-radius = 10
-threshold = 0.6
-corners, usan_area = cornerSusan(inImage, radius, threshold)
+# radius = 10
+# threshold = 0.6
+# corners, usan_area = cornerSusan(inImage, radius, threshold)
 
 
 # saveImage(outImage, 'imagenes-bordes/imagen_guardada_circle12.jpg')
 # Visualizar el mapa de esquinas
-plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
 
-plt.subplot(1, 3, 1)
-plt.imshow(inImage, cmap='gray')
-plt.title('Imagen original')
-plt.axis('off')
+# plt.subplot(1, 3, 1)
+# plt.imshow(inImage, cmap='gray')
+# plt.title('Imagen original')
+# plt.axis('off')
 
-plt.subplot(1, 3, 2)
-plt.imshow(corners, cmap='gray')
-plt.title('Mapa de esquinas')
-plt.axis('off')
+# plt.subplot(1, 3, 2)
+# plt.imshow(corners, cmap='gray')
+# plt.title('Mapa de esquinas')
+# plt.axis('off')
 
-plt.subplot(1, 3, 3)
-plt.imshow(usan_area, cmap='gray')
-plt.title('usanArea')
-plt.axis('off')
+# plt.subplot(1, 3, 3)
+# plt.imshow(usan_area, cmap='gray')
+# plt.title('usanArea')
+# plt.axis('off')
 
-plt.tight_layout()
-plt.show()
-
-# plt.figure()
-# plt.subplot(1, 2, 1)
-# io.imshow(inImage, cmap='gray') 
-# plt.title('Imagen de entrada')
-# plt.subplot(1, 2, 2)
-# io.imshow(outImage, cmap='gray')
-# plt.title('Imagen resultante')
-# # plt.subplot(1, 3, 3)
-# # plt.imshow(gy, cmap='gray')
-# # plt.title('gy')
+# plt.tight_layout()
 # plt.show()
+
+plt.figure()
+plt.subplot(1, 2, 1)
+io.imshow(inImage, cmap='gray') 
+plt.title('Imagen de entrada')
+plt.subplot(1, 2, 2)
+io.imshow(outImage, cmap='gray')
+plt.title('Imagen resultante')
+plt.show()
