@@ -2,69 +2,74 @@ import numpy as np
 from skimage import io
 import matplotlib.pyplot as plt
 from skimage import color
-from skimage import morphology
 
-
+# Operador morfologico: erosion
 def erode(inImage, SE, center=[]):
     if len(center) == 0:
         center = [(SE.shape[0] // 2), (SE.shape[1] // 2)]
 
-    P, Q = SE.shape
-    M, N = inImage.shape
-    outImage = np.zeros((M, N), dtype=np.float32)
+    se_rows, se_cols = SE.shape
+    input_rows, input_cols = inImage.shape
+    outImage = np.zeros((input_rows, input_cols), dtype=np.float32)
 
-    for i in range(M):
-        for j in range(N):
-            match = True
-            for p in range(P):
-                for q in range(Q):
-                    if SE[p, q] == 1:
-                        x = i + p - center[0]
-                        y = j + q - center[1]
-                        if x < 0 or x >= M or y < 0 or y >= N:
-                            match = False
+    for i in range(input_rows):
+        for j in range(input_cols):
+            concordance = True
+            for se_rows in range(se_rows):
+                for se_cols in range(se_cols):
+                    if SE[se_rows, se_cols] == 1:
+                        # Calculo de las coordenadas de la posicion del pixel del SE en la imagen input
+                        SE_in_input_x = i + se_rows - center[0]
+                        SE_in_input_y = j + se_cols - center[1]
+                        if SE_in_input_x < 0 or SE_in_input_x >= input_rows or SE_in_input_y < 0 or SE_in_input_y >= input_cols:
+                            concordance = False
                             break
-                        if inImage[x, y] != 1:
-                            match = False
-                if not match:
+                        if inImage[SE_in_input_x, SE_in_input_y] != 1:
+                            concordance = False
+                if not concordance:
                     break
-
-            if match:
+            # Si todos los pixeles coinciden
+            if concordance:
                 outImage[i, j] = 1
 
     return outImage
 
+# Operador morfologico: dilatacion
 def dilate(inImage, SE, center=[]):
     if len(center) == 0:
         center = [(SE.shape[0] // 2), (SE.shape[1] // 2)]
 
-    P, Q = SE.shape
-    M, N = inImage.shape
-    outImage = np.zeros((M, N), dtype=np.float32)
+    se_rows, se_cols = SE.shape
+    input_rows, input_cols = inImage.shape
+    outImage = np.zeros((input_rows, input_cols), dtype=np.float32)
 
-    for i in range(M):
-        for j in range(N):
+    # Dilata si un pixel activo de la imagen coincide con uno activo en el SE
+    for i in range(input_rows):
+        for j in range(input_cols):
             if inImage[i, j] == 1:
-                for p in range(P):
-                    for q in range(Q):
-                        if SE[p, q] == 1:
-                            x = i + p - center[0]
-                            y = j + q - center[1]
-                            if x >= 0 and x < M and y >= 0 and y < N:
-                                outImage[x, y] = 1
+                for se_rows in range(se_rows):
+                    for se_cols in range(se_cols):
+                        if SE[se_rows, se_cols] == 1:
+                            SE_in_input_x = i + se_rows - center[0]
+                            SE_in_input_y = j + se_cols - center[1]
+                            if SE_in_input_x >= 0 and SE_in_input_x < input_rows and SE_in_input_y >= 0 and SE_in_input_y < input_cols:
+                                outImage[SE_in_input_x, SE_in_input_y] = 1
 
     return outImage
 
+# Operador morfologico: abertura
 def opening(inImage, SE, center=[]):
-    eroded = erode(inImage, SE, center)
-    opened = dilate(eroded, SE, center)
-    return opened
+    after_erode = erode(inImage, SE, center)
+    result_opened = dilate(after_erode, SE, center)
+    return result_opened
 
+# Operador morfologico: cierre
 def closing(inImage, SE, center=[]):
-    dilated = dilate(inImage, SE, center)
-    closed = erode(dilated, SE, center)
-    return closed
+    after_dilate = dilate(inImage, SE, center)
+    result_closed = erode(after_dilate, SE, center)
+    return result_closed
 
+# Transformada hit or miss
 def hit_or_miss(inImage, objSEj, bgSE, center=[]):
     if len(center) == 0:
         center = [(objSEj.shape[0] // 2), (objSEj.shape[1] // 2)]
@@ -77,23 +82,26 @@ def hit_or_miss(inImage, objSEj, bgSE, center=[]):
         print("Error: elementos estructurantes incoherentes")
         return None
 
-    eroded_obj = erode(inImage, objSEj, center)
-    inverted_image = 1 - inImage
-    eroded_bg = erode(inverted_image, bgSE, center)
-    outImage = eroded_obj * eroded_bg
+    after_erode_obj = erode(inImage, objSEj, center)
+    inverted_input = 1 - inImage
+    after_erode_bg = erode(inverted_input, bgSE, center)
+    outImage = after_erode_obj * after_erode_bg
 
     return outImage
 
 def black_and_white(img):
     if len(img.shape) == 2:
-        img = img.astype(float) / 255.0
+        min = np.min(img)
+        max = np.max(img)
+        img = (img - min) / (max - min)
+        img = img.astype(float)
     elif len(img.shape) == 3:
         if img.shape[2] == 4:  
             img = img[:, :, :3] 
         img = color.rgb2gray(img).astype(float)
     return img
 
-def saveImage(image, filename):
+def save_image(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
@@ -107,15 +115,15 @@ inImage_binary = (inImage > umbral).astype(float)
 #               [1, 0, 0, 0, 0, 0],
 #               [0, 1, 1, 0, 0, 0],
 #               [0, 1, 0, 0, 0, 0],
-#               [0, 1, 0, 0, 0, 0]], dtype=np.uint8)
+#               [0, 1, 0, 0, 0, 0]], dtype=np.float32)
 
-# SE = np.array([[1, 1]], dtype=np.uint8)
+# SE = np.array([[1, 1]], dtype=np.float32)
 
 # SE = np.array([[0, 0, 0, 0, 0, 0],
 #               [0, 1, 1, 1, 1, 0],
 #               [0, 1, 1, 1, 1, 0],
 #               [0, 1, 1, 1, 1, 0],
-#               [0, 0, 0, 0, 0, 0]], dtype=np.uint8)
+#               [0, 0, 0, 0, 0, 0]], dtype=np.float32)
 
 SE = np.array([[1, 1, 1],
                [1, 1, 1],
@@ -123,10 +131,10 @@ SE = np.array([[1, 1, 1],
 
 # SE = np.array([[0, 0, 1, 1, 1, 0, 0]])
 
-# Realizar las operaciones morfológicas
+# Comprobacion OPERADORES MORFOLOGICOS
 # outImageErode = erode(inImage_binary, SE)
 # outImageDilate = dilate(inImage_binary, SE)
-# outImageOpened = opening(inImage_binary, SE, (0,4))
+# outImageOpened = opening(inImage_binary, SE)
 # outImageClosed = closing(inImage_binary, SE)
 
 # plt.figure(figsize=(15, 6))
@@ -155,16 +163,16 @@ SE = np.array([[1, 1, 1],
 
 # plt.show()
 
-# Definir los elementos estructurantes
-# objSEj = np.array([[0, 1, 0],
-#                  [0, 1, 1],
-#                  [0, 0, 0]])
+# Comprobacion HIT-OR-MISS
+objSEj = np.array([[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
 
-# bgSE = np.array([[0, 0, 0],
-#                 [1, 0, 0],
-#                 [1, 1, 0]])
+bgSE = np.array([[0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0]])
 
-# # Crear una imagen de ejemplo
+# Crear una imagen de ejemplo
 # inImage = np.array([[0, 0, 0, 0, 1, 0],
 #                     [0, 1, 0, 0, 1, 1],
 #                    [0, 0, 1, 0, 0, 0],
@@ -172,21 +180,8 @@ SE = np.array([[1, 1, 1],
 #                    [0, 0, 0, 1, 0, 0],
 #                    [0, 0, 0, 0, 0, 0]])
 
-objSE = np.array([         [0, 0, 0],
-                           [0, 1, 1],
-                           [0, 0, 0]])
-bgSE = np.array([        [0, 0, 0],
-                         [1, 0, 0],
-                         [1, 1, 0]])
-
 # Aplicar la transformada Hit-or-Miss
-outImage = hit_or_miss(inImage, objSE, bgSE)
-
-# Imprimir la imagen resultante
-# print("Imagen de entrada:")
-# print(inImage)
-# print("\nImagen de salida (Transformada Hit-or-Miss):")
-# print(outImage)
+outImage = hit_or_miss(inImage, objSEj, bgSE)
 
 plt.figure(figsize=(10, 5))
 

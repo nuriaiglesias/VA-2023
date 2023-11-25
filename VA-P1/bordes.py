@@ -3,8 +3,6 @@ from skimage import io
 from skimage import color
 import matplotlib.pyplot as plt
 import math
-from skimage import measure
-
 
 
 def filterImage(inImage, kernel):
@@ -53,6 +51,7 @@ def gaussianFilter(inImage, sigma):
 
     return outImage
 
+# Gradiente de una imagen
 def gradientImage(inImage, operator):
     if operator == 'Roberts':
         gx_kernel = np.array([[-1, 0], [0, 1]])
@@ -67,102 +66,111 @@ def gradientImage(inImage, operator):
         gx_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
         gy_kernel = gx_kernel.T
     else:
-        raise ValueError("Operador no válido. Debe ser 'Roberts', 'CentralDiff', 'Prewitt' o 'Sobel'.")
+        raise ValueError("Operador proporcionado invalido. Por favor, seleccione entre los siguientes: 'Roberts', 'CentralDiff', 'Prewitt' o 'Sobel'.")
 
     gx = filterImage(inImage, gx_kernel)
     gy = filterImage(inImage, gy_kernel)
     
     return gx, gy
 
+# Filtro Laplaciano de Gaussiano
 def LoG(inImage, sigma):
-    laplacian_kernel = np.array([[-1, -1, -1],
+    log_kernel = np.array([[-1, -1, -1],
                  [-1, 8, -1],
                  [-1, -1, -1]])
-    gaussian_image = gaussianFilter(inImage,sigma)
-    laplacian_result = filterImage(gaussian_image, laplacian_kernel)
-    return laplacian_result
+    gaussian_output = gaussianFilter(inImage,sigma)
+    log_output = filterImage(gaussian_output, log_kernel)
+    return log_output
 
 def edgeCanny(inImage, sigma, tlow, thigh):
-    smoothed_image = gaussianFilter(inImage, sigma)
+    gaussian_output = gaussianFilter(inImage, sigma)
 
-    gx, gy = gradientImage(smoothed_image, 'Sobel')
+    gx, gy = gradientImage(gaussian_output, 'Sobel')
 
     magnitude = np.sqrt(gx**2 + gy**2)
     direction = np.arctan2(gy, gx)
 
-    # Supresión no máxima
-    height, width = inImage.shape
-    suppressed_image = np.zeros((height, width), dtype=np.float32)
+    # Supresión no maxima
+    image_height, image_width = inImage.shape
+    delineated_edges = np.zeros((image_height, image_width), dtype=np.float32)
 
-    for i in range(1, height - 1):
-        for j in range(1, width - 1):
+    # Comprobacion del anterior y posterior pixel en la misma direccion y sus valores
+    for i in range(1, image_height - 1):
+        for j in range(1, image_width - 1):
             angle = math.degrees(direction[i, j]) 
             if(angle < 0):
                 angle += 180
-            # print(angle)
             # FILA
             if(angle >= 0 and angle < 22.5) or (angle >= 157.5 and angle <= 180):
                 if (magnitude[i, j] >= magnitude[i, j + 1]) and (magnitude[i, j] >= magnitude[i, j - 1]):
-                    suppressed_image[i, j] = magnitude[i, j]
+                    delineated_edges[i, j] = magnitude[i, j]
                 else: 
-                    suppressed_image[i, j] = 0
+                    delineated_edges[i, j] = 0
             # DIAGONAL DELANTE
             elif(angle >= 22.5 and angle < 67.5):
                 if (magnitude[i, j] >= magnitude[i + 1, j + 1]) and (magnitude[i, j] >= magnitude[i - 1, j - 1]):
-                    suppressed_image[i, j] = magnitude[i, j]
+                    delineated_edges[i, j] = magnitude[i, j]
                 else: 
-                    suppressed_image[i, j] = 0
+                    delineated_edges[i, j] = 0
             # DIAGONAL DETRAS
             elif(angle >= 112.5 and angle < 157.5):
                 if (magnitude[i, j] >= magnitude[i + 1, j - 1]) and (magnitude[i, j] >= magnitude[i - 1, j + 1]):
-                    suppressed_image[i, j] = magnitude[i, j]
+                    delineated_edges[i, j] = magnitude[i, j]
                 else: 
-                    suppressed_image[i, j] = 0
+                    delineated_edges[i, j] = 0
             # COLUMNA
             elif(angle >= 67.5 and angle < 112.5):
                 if (magnitude[i, j] >= magnitude[i - 1, j]) and (magnitude[i, j] >= magnitude[i + 1, j]):
-                    suppressed_image[i, j] = magnitude[i, j]
+                    delineated_edges[i, j] = magnitude[i, j]
                 else: 
-                    suppressed_image[i, j] = 0
-    # Umbralización por histéresis
-    strong_edges = suppressed_image > thigh
-    weak_edges = (suppressed_image >= tlow) & (suppressed_image <= thigh)
-    edge_image = np.zeros((height, width), dtype=np.uint8)
-    visited = np.zeros((height, width), dtype=bool)
+                    delineated_edges[i, j] = 0
 
-    for i in range(height):
-        for j in range(width):
-            if strong_edges[i, j] and not visited[i, j]:
-                edge_image[i, j] = 255  # Marcar como borde fuerte
-                visited[i, j] = True
+    # Umbralizacion por histeresis
+    strong_edges = delineated_edges > thigh
+    edge_image = np.zeros((image_height, image_width), dtype=np.float32)
+    # Registro de los pixeles visitados
+    visited = np.zeros((image_height, image_width), dtype=bool)
 
-                stack = [(i, j)]
-                while stack:
-                    current_i, current_j = stack.pop()
-                    for di in range(-1, 2):
-                        for dj in range(-1, 2):
-                            ni, nj = current_i + di, current_j + dj
-                            if 0 <= ni < height and 0 <= nj < width and not visited[ni, nj]:
-                                if weak_edges[ni, nj]:
-                                    # Verificar la dirección del borde
-                                    angle = math.degrees(direction[ni, nj])
-                                    if angle < 0:
-                                        angle += 180
-                                    edge_angle = math.degrees(direction[current_i, current_j])
-                                    if edge_angle < 0:
-                                        edge_angle += 180
-                                    if abs(edge_angle - angle) < 45 or abs(edge_angle - angle) > 135:
-                                        edge_image[ni, nj] = 255
-                                        visited[ni, nj] = True
-                                        stack.append((ni, nj))
+    def detect_edges(current_row, current_col):
+        if current_row < 0 or current_row >= image_height or current_col < 0 or current_col >= image_width or visited[current_row, current_col]:
+            return
+        # Si supera el umbral bajo, se marca como fuerte
+        if delineated_edges[current_row, current_col] > tlow:
+            edge_image[current_row, current_col] = 1
+            visited[current_row, current_col] = True
+
+            # Recorro pixeles adyacentes
+            for adj_row in range(-1, 2):
+                for adj_col in range(-1, 2):
+                    # Coordenadas del pixel adyacente
+                    ni, nj = current_row + adj_row, current_col + adj_col
+                    if 0 <= ni < image_height and 0 <= nj < image_width and not visited[ni, nj]:
+                        # Angulos del gradiente del pixel adyacente y del actual
+                        angle = math.degrees(direction[ni, nj])
+                        edge_angle = math.degrees(direction[current_row, current_col])
+                        if angle < 0:
+                            angle += 180
+                        if edge_angle < 0:
+                            edge_angle += 180
+                        if abs(edge_angle - angle) < 45 or (abs(edge_angle - angle) > 135 and abs(edge_angle - angle) < 180):
+                            # Llamada recursiva para buscar bordes débiles en esa dirección
+                            detect_edges(ni, nj)
+
+
+    # Recorremos los bordes fuertes
+    for current_row in range(image_height):
+        for current_col in range(image_width):
+            if strong_edges[current_row, current_col] and not visited[current_row, current_col]:
+                detect_edges(current_row, current_col)
 
     return edge_image
+
 
 def cornerSusan(inImage, r, t):
     outCorners = np.zeros_like(inImage)
     usanArea = np.zeros_like(inImage)
     
-    height, width = inImage.shape[:2]
+    image_height, image_width = inImage.shape[:2]
 
     mask = np.zeros((2*r+1, 2*r+1))
     center = (r, r)
@@ -173,11 +181,10 @@ def cornerSusan(inImage, r, t):
                 mask[i, j] = 1
 
     max_usan = np.sum(mask) 
-
     g = 3/4 * max_usan  
 
-    for y in range(r, height - r):
-        for x in range(r, width - r):
+    for y in range(r, image_height - r):
+        for x in range(r, image_width - r):
             core_intensity = inImage[y, x]
 
             region = inImage[y-r:y+r+1, x-r:x+r+1]
@@ -193,10 +200,12 @@ def cornerSusan(inImage, r, t):
 
     return outCorners, usanArea
 
-
 def black_and_white(img):
     if len(img.shape) == 2:
-        img = img.astype(float) / 255.0
+        min = np.min(img)
+        max = np.max(img)
+        img = (img - min) / (max - min)
+        img = img.astype(float)
     elif len(img.shape) == 3:
         if img.shape[2] == 4:  
             img = img[:, :, :3] 
@@ -207,50 +216,46 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('imagenes-bordes/lena.png')
+inImage = io.imread('imagenes-bordes/circles2.jpeg')
 
 inImage = black_and_white(inImage)
 
 # gx, gy = gradientImage(inImage, 'Prewitt')
-
 # outImage = LoG(inImage, 0.5)
-# se me va hacia arriba, se me va hacia abajo; se me va hacia la izq
-# region_of_interest = inImage[170:200, 180:210]
-
-outImage = edgeCanny(inImage, 0.3, 0.1, 0.8)
-
-# radius = 10
-# threshold = 0.6
-# corners, usan_area = cornerSusan(inImage, radius, threshold)
-
+# outImage = edgeCanny(inImage, 0.3, 0.1, 0.8)
+radius = 10
+threshold = 0.6
+corners, usan_area = cornerSusan(inImage, radius, threshold)
 
 # saveImage(outImage, 'imagenes-bordes/imagen_guardada_circle12.jpg')
-# Visualizar el mapa de esquinas
-# plt.figure(figsize=(8, 6))
 
-# plt.subplot(1, 3, 1)
-# plt.imshow(inImage, cmap='gray')
-# plt.title('Imagen original')
-# plt.axis('off')
+# Visualizar cornerSusan
+plt.figure(figsize=(8, 6))
 
-# plt.subplot(1, 3, 2)
-# plt.imshow(corners, cmap='gray')
-# plt.title('Mapa de esquinas')
-# plt.axis('off')
+plt.subplot(1, 3, 1)
+plt.imshow(inImage, cmap='gray')
+plt.title('Imagen original')
+plt.axis('off')
 
-# plt.subplot(1, 3, 3)
-# plt.imshow(usan_area, cmap='gray')
-# plt.title('usanArea')
-# plt.axis('off')
+plt.subplot(1, 3, 2)
+plt.imshow(corners, cmap='gray')
+plt.title('Mapa de esquinas')
+plt.axis('off')
 
-# plt.tight_layout()
-# plt.show()
+plt.subplot(1, 3, 3)
+plt.imshow(usan_area, cmap='gray')
+plt.title('usanArea')
+plt.axis('off')
 
-plt.figure()
-plt.subplot(1, 2, 1)
-io.imshow(inImage, cmap='gray') 
-plt.title('Imagen de entrada')
-plt.subplot(1, 2, 2)
-io.imshow(outImage, cmap='gray')
-plt.title('Imagen resultante')
+plt.tight_layout()
 plt.show()
+
+# Visualizar 
+# plt.figure()
+# plt.subplot(1, 2, 1)
+# io.imshow(inImage, cmap='gray') 
+# plt.title('Imagen de entrada')
+# plt.subplot(1, 2, 2)
+# io.imshow(outImage, cmap='gray')
+# plt.title('Imagen resultante')
+# plt.show()

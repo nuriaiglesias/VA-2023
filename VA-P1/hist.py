@@ -13,7 +13,6 @@ def adjustIntensity(inImage, inRange=None, outRange=[0, 1]):
     omin, omax = outRange
     
     # Ajuste del rango dinámico a outRange
-    # (((ecuación de la recta) / rango de entrada) * (rango de salida)) + se coloca en su sitio
     outImage = (((inImage - imin) / (imax - imin)) * (omax - omin)) + omin
 
     # Asegura rango de salida entre imin, imax
@@ -25,16 +24,15 @@ def adjustIntensity(inImage, inRange=None, outRange=[0, 1]):
 # Ecualización del histograma
 def equalizeIntensity(inImage, nBins=256):
     # Calculo del histograma
-    # nBins es el número de divisiones para el hist
     histogram_values, bin_divisions = np.histogram(inImage, bins=nBins, range=(0, 1))
 
     # Calculo histograma acumulado
     accumulated_histogram = histogram_values.cumsum()
     
     # Normalizacion para estar en rango [0,1]
-    accumulated_hist_normalized = accumulated_histogram / accumulated_histogram[-1]
+    accumulated_hist_normalized = accumulated_histogram / np.max(accumulated_histogram)
 
-    # Interpolación: crea una "línea" basada en los bins y sus alturas (cdf_normalized), para predecir alturas en el eje x de puntos no marcados
+    # Interpolación
     interp_algorithm = interp1d(bin_divisions[:-1], accumulated_hist_normalized, kind='linear', fill_value='extrapolate')
 
     outImage = interp_algorithm(inImage)
@@ -47,20 +45,25 @@ def saveImage(image, filename):
 
 def black_and_white(img):
     if len(img.shape) == 2:
-        img = img.astype(float) / 255.0
+        min = np.min(img)
+        max = np.max(img)
+        img = (img - min) / (max - min)
+        img = img.astype(float)
     elif len(img.shape) == 3:
         if img.shape[2] == 4:  
             img = img[:, :, :3] 
         img = color.rgb2gray(img).astype(float)
     return img
 
-inImage = io.imread('imagenes-hist/gato.jpeg')
+inImage = io.imread('imagenes-hist/perro.jpg')
 inImageBW = black_and_white(inImage)
 
-# Rango bajo implica más oscura, menos contraste
-# Rango alto implica más brillante, más contraste
-# outImage = adjustIntensity(inImageBW, outRange=[0.2, 0.3])
-outImage = equalizeIntensity(inImageBW, nBins=256)
+
+# outImage = adjustIntensity(inImageBW, inRange=[0.2, 0.7], outRange=[0.2, 0.3])
+outImage = equalizeIntensity(inImageBW, nBins=201)
+# hist, bin_edges = np.histogram(outImage,bins=201, range=(0,1))
+# cdf = hist.cumsum()
+# cdf_normalized = cdf /cdf[-1]
 
 saveImage(outImage, 'imagenes-hist/img_saved_adjustIntensity.jpg')
 
@@ -71,6 +74,9 @@ plt.title('Histograma original')
 plt.subplot(1, 2, 2)
 plt.hist(outImage.ravel(), bins=256, range=(0, 1), color='red', alpha=0.7)
 plt.title('Histograma ajustado')
+# plt.subplot(1, 3, 3)
+# plt.plot(cdf_normalized)
+
 # Imágenes
 plt.figure()
 plt.subplot(1, 2, 1)

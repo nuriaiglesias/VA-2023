@@ -3,62 +3,71 @@ from skimage import io
 from skimage import color
 import matplotlib.pyplot as plt
 
+# Filtrado espacial - convolucion
 def filterImage(inImage, kernel):
-    height, width = inImage.shape
-    k_height, k_width = kernel.shape if len(kernel.shape) == 2 else (1, kernel.shape[0])
+    image_height, image_width = inImage.shape
+    # Asignacion dimensiones kernel, unidimensional o bidimensional
+    kernel_height, kernel_width = kernel.shape if len(kernel.shape) == 2 else (1, kernel.shape[0])
     
-    extended_height = height + k_height - 1
-    extended_width = width + k_width - 1
-    extendedImage = np.zeros((extended_height, extended_width))    
-    extendedImage[k_height // 2 : k_height // 2 + height, k_width // 2 : k_width // 2 + width] = inImage
+    # Calculo de las dimensiones imagen extendida
+    extra_height = image_height + kernel_height - 1
+    extra_width = image_width + kernel_width - 1
+    extra_image = np.zeros((extra_height, extra_width))
+    # Coloco la imagen original en el centro de la matriz extendida
+    extra_image[kernel_height // 2 : kernel_height // 2 + image_height, kernel_width // 2 : kernel_width // 2 + image_width] = inImage
 
-    outImage = np.zeros((height, width))
-
-    for i in range(height):
-        for j in range(width):
-            pixel_result = 0            
-            for m in range(k_height):
-                for n in range(k_width):
+    outImage = np.zeros((image_height, image_width))
+    for i in range(image_height):
+        for j in range(image_width):
+            convolution_value = 0
+            # Aplico el kernel en el pixel actual
+            for m in range(kernel_height):
+                for n in range(kernel_width):
+                    # Coordenadas del área alrededor del píxel actual
                     x = i + m
                     y = j + n
                     if len(kernel.shape) == 2:
-                        pixel_result += extendedImage[x, y] * kernel[m, n]
+                        convolution_value += extra_image[x, y] * kernel[m, n]
                     else:
-                        pixel_result += extendedImage[x, y] * kernel[n]            
-            outImage[i, j] = pixel_result
+                        convolution_value += extra_image[x, y] * kernel[n] 
+            outImage[i, j] = convolution_value
     
     return outImage
 
-
+# Kernel gaussiano 1D
 def gaussKernel1D(sigma):
     N = int(2 * np.ceil(3 * sigma) + 1)
-    center = N // 2
+    midpoint = N // 2
     kernel = np.zeros(N)
 
     for i in range(N):
-        x = i - center
+        # Calculo distancia desde el centro
+        x = i - midpoint
         kernel[i] = np.exp(-x**2 / (2 * sigma**2)) / (sigma * np.sqrt(2 * np.pi))
 
     return kernel
 
+# Suavizado Gaussiano 2D
 def gaussianFilter(inImage, sigma):
-    kernel_x = gaussKernel1D(sigma)
-    kernel_y = kernel_x.reshape(-1, 1)
-    intermediate_image = filterImage(inImage, kernel_x)
-    outImage = filterImage(intermediate_image, kernel_y)
+    horizontal_kernel = gaussKernel1D(sigma)
+    vertical_kernel = horizontal_kernel.reshape(-1, 1)
+    horizontal_filtered = filterImage(inImage, horizontal_kernel)
+    outImage = filterImage(horizontal_filtered, vertical_kernel)
 
     return outImage
 
-
+# Filtro medianas 2D
 def medianFilter(inImage, filterSize):
-    offset = filterSize // 2
-    height, width = inImage.shape
+    neighborhood = filterSize // 2
+    image_height, image_width = inImage.shape
     outImage = np.zeros_like(inImage)
 
-    for y in range(offset, height - offset):
-        for x in range(offset, width - offset):
-            window = inImage[y - offset:y + offset + 1, x - offset:x + offset + 1]
-            outImage[y, x] = np.median(window)
+    # Recorre la imagen ignorando bordes
+    for y in range(neighborhood, image_height - neighborhood):
+        for x in range(neighborhood, image_width - neighborhood):
+            # Cojo una sección de la imagen alrededor del píxel
+            section = inImage[y - neighborhood:y + neighborhood + 1, x - neighborhood:x + neighborhood + 1]
+            outImage[y, x] = np.median(section)
 
     return outImage
 
@@ -79,7 +88,7 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-img_input = io.imread('raya-y-puntos.jpeg')
+inImage = io.imread('raya-y-puntos.jpeg')
 # kernel = io.imread('khalo.jpeg')
 # kernel = np.array([[1, 1, 1, 1, 1, 1, 1],
 #                     [1, 1, 1, 1, 1, 1, 1],
@@ -89,10 +98,10 @@ img_input = io.imread('raya-y-puntos.jpeg')
 #                     [1, 1, 1, 1, 1, 1, 1],
 #                     [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
 
-# img_input = np.zeros([150,150])
-# img_input[60,60] = 1
+# inImage = np.zeros([150,150])
+# inImage[60,60] = 1
 
-img_input_bw = black_and_white(img_input)
+img_input_bw = black_and_white(inImage)
 # kernel_bw = black_and_white(kernel)
 
 # Comprobación GAUSSKERNEL1D
@@ -107,9 +116,8 @@ img_input_bw = black_and_white(img_input)
 # plt.grid()
 # plt.show()
 
-
 # Comprobación FILTERIMAGE
-# outImage = filterImage(img_input, kernel_bw)
+# outImage = filterImage(inImage, kernel_bw)
 
 # Comprobación GAUSSIANFILTER
 # sigma = 2
@@ -127,11 +135,10 @@ saveImage(outImage, 'imagenes-conv/imagen_guardada_gaussianfilter.jpg')
 # Mostrar imágenes
 plt.figure(1,2)
 plt.subplot(1, 2, 1)
-plt.imshow(img_input, cmap='gray',vmin=0.0,vmax=1.0) 
+plt.imshow(inImage, cmap='gray',vmin=0.0,vmax=1.0) 
 plt.title('Imagen de entrada')
 plt.subplot(1, 2, 2)
 plt.imshow(outImage, cmap='gray',vmin=0.0,vmax=1.0)
 plt.title('Imagen resultante')
 
 plt.show()
-
