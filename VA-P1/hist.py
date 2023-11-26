@@ -58,14 +58,10 @@ def black_and_white(img):
 inImage = io.imread('imagenes-hist/perro.jpg')
 inImageBW = black_and_white(inImage)
 
+outImage = adjustIntensity(inImageBW, outRange=[0.2, 0.3])
+# outImage = equalizeIntensity(inImageBW, nBins=256)
 
-# outImage = adjustIntensity(inImageBW, inRange=[0.2, 0.7], outRange=[0.2, 0.3])
-outImage = equalizeIntensity(inImageBW, nBins=201)
-# hist, bin_edges = np.histogram(outImage,bins=201, range=(0,1))
-# cdf = hist.cumsum()
-# cdf_normalized = cdf /cdf[-1]
-
-saveImage(outImage, 'imagenes-hist/img_saved_adjustIntensity.jpg')
+saveImage(outImage, 'imagenes-hist/saved_equalizeIntensity.jpg')
 
 # Histogramas
 plt.subplot(1, 2, 1)
@@ -74,8 +70,6 @@ plt.title('Histograma original')
 plt.subplot(1, 2, 2)
 plt.hist(outImage.ravel(), bins=256, range=(0, 1), color='red', alpha=0.7)
 plt.title('Histograma ajustado')
-# plt.subplot(1, 3, 3)
-# plt.plot(cdf_normalized)
 
 # Imágenes
 plt.figure()

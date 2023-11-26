@@ -101,7 +101,7 @@ def black_and_white(img):
         img = color.rgb2gray(img).astype(float)
     return img
 
-def save_image(image, filename):
+def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 

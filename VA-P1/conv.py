@@ -88,9 +88,12 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('raya-y-puntos.jpeg')
-# kernel = io.imread('khalo.jpeg')
-# kernel = np.array([[1, 1, 1, 1, 1, 1, 1],
+# ENTRADA
+inImage = io.imread('imagenes-conv/señora-de-puntos.png')
+# img_input_bw = np.zeros([150,150])
+# img_input_bw[60,60] = 1
+# kernel = io.imread('imagenes-conv/kernel.jpg')
+# kernel_bw = np.array([[1, 1, 1, 1, 1, 1, 1],
 #                     [1, 1, 1, 1, 1, 1, 1],
 #                     [1, 1, 1, 1, 1, 1, 1],
 #                     [1, 1, 1, 1, 1, 1, 1],
@@ -98,13 +101,11 @@ inImage = io.imread('raya-y-puntos.jpeg')
 #                     [1, 1, 1, 1, 1, 1, 1],
 #                     [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
 
-# inImage = np.zeros([150,150])
-# inImage[60,60] = 1
-
+# BLANCO Y NEGRO
 img_input_bw = black_and_white(inImage)
 # kernel_bw = black_and_white(kernel)
 
-# Comprobación GAUSSKERNEL1D
+# COMPROBACION GAUSSKERNEL1D
 # sigma = 15
 # kernel = gaussKernel1D(sigma)
 
@@ -113,29 +114,29 @@ img_input_bw = black_and_white(inImage)
 # plt.ylabel('Valor del Kernel')
 # plt.title(f'Kernel Gaussiano 1D para Sigma={sigma}')
 # plt.legend()
-# plt.grid()
 # plt.show()
 
-# Comprobación FILTERIMAGE
-# outImage = filterImage(inImage, kernel_bw)
+# COMPROBACION FILTERIMAGE
+# outImage = filterImage(img_input_bw, kernel_bw)
 
-# Comprobación GAUSSIANFILTER
-# sigma = 2
+# COMPROBACION GAUSSIANFILTER
+# sigma = 5
 # outImage = gaussianFilter(img_input_bw,sigma)
 
-# Comprobación MEDIANFILTER
-outImage = medianFilter(img_input_bw, 7)
+# COMPROBACION MEDIANFILTER
+outImage = medianFilter(img_input_bw, 15)
 
+# GUARDAR IMAGEN
 # min = np.min(outImage)
 # max = np.max(outImage)
 # outImage = (outImage - min) / (max - min)
-saveImage(outImage, 'imagenes-conv/imagen_guardada_gaussianfilter.jpg')
+saveImage(outImage, 'imagenes-conv/saved_medianFilter.jpg')
 
 
 # Mostrar imágenes
-plt.figure(1,2)
+plt.figure()
 plt.subplot(1, 2, 1)
-plt.imshow(inImage, cmap='gray',vmin=0.0,vmax=1.0) 
+plt.imshow(img_input_bw, cmap='gray',vmin=0.0,vmax=1.0) 
 plt.title('Imagen de entrada')
 plt.subplot(1, 2, 2)
 plt.imshow(outImage, cmap='gray',vmin=0.0,vmax=1.0)
