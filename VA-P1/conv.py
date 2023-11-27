@@ -62,7 +62,6 @@ def medianFilter(inImage, filterSize):
     image_height, image_width = inImage.shape
     outImage = np.zeros_like(inImage)
 
-    # Recorre la imagen ignorando bordes
     for y in range(neighborhood, image_height - neighborhood):
         for x in range(neighborhood, image_width - neighborhood):
             # Cojo una sección de la imagen alrededor del píxel
@@ -89,17 +88,17 @@ def saveImage(image, filename):
     io.imsave(filename, scaled_image)
 
 # ENTRADA
-inImage = io.imread('imagenes-conv/señora-de-puntos.png')
+inImage = io.imread('imagenes-conv/gato.jpeg')
 # img_input_bw = np.zeros([150,150])
 # img_input_bw[60,60] = 1
 # kernel = io.imread('imagenes-conv/kernel.jpg')
-# kernel_bw = np.array([[1, 1, 1, 1, 1, 1, 1],
-#                     [1, 1, 1, 1, 1, 1, 1],
-#                     [1, 1, 1, 1, 1, 1, 1],
-#                     [1, 1, 1, 1, 1, 1, 1],
-#                     [1, 1, 1, 1, 1, 1, 1],
-#                     [1, 1, 1, 1, 1, 1, 1],
-#                     [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
+kernel_bw = np.array([[1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1]], dtype=np.float32) / 9.0
 
 # BLANCO Y NEGRO
 img_input_bw = black_and_white(inImage)
@@ -117,20 +116,20 @@ img_input_bw = black_and_white(inImage)
 # plt.show()
 
 # COMPROBACION FILTERIMAGE
-# outImage = filterImage(img_input_bw, kernel_bw)
+outImage = filterImage(img_input_bw, kernel_bw)
 
 # COMPROBACION GAUSSIANFILTER
 # sigma = 5
 # outImage = gaussianFilter(img_input_bw,sigma)
 
 # COMPROBACION MEDIANFILTER
-outImage = medianFilter(img_input_bw, 15)
+# outImage = medianFilter(img_input_bw, 15)
 
 # GUARDAR IMAGEN
 # min = np.min(outImage)
 # max = np.max(outImage)
 # outImage = (outImage - min) / (max - min)
-saveImage(outImage, 'imagenes-conv/saved_medianFilter.jpg')
+saveImage(outImage, 'imagenes-conv/saved_filterImage.jpg')
 
 
 # Mostrar imágenes

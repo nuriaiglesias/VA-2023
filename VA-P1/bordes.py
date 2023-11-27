@@ -128,7 +128,6 @@ def edgeCanny(inImage, sigma, tlow, thigh):
     # Umbralizacion por histeresis
     strong_edges = delineated_edges > thigh
     edge_image = np.zeros((image_height, image_width), dtype=np.float32)
-    # Registro de los pixeles visitados
     visited = np.zeros((image_height, image_width), dtype=bool)
 
     def detect_edges(current_row, current_col):
@@ -154,7 +153,7 @@ def edgeCanny(inImage, sigma, tlow, thigh):
                             current_angle += 180
                         angle_difference = abs(current_angle - adj_angle)
                         if angle_difference < 45 or (angle_difference > 135 and angle_difference < 180):
-                            # Llamada recursiva para buscar bordes débiles en esa dirección
+                            # Llamada recursiva
                             detect_edges(adjacent_x, adjacent_y)
 
 
@@ -189,18 +188,15 @@ def cornerSusan(inImage, r, t):
     # Iteracion sobre la imagen para detectar esquinas
     for y in range(r, image_height - r):
         for x in range(r, image_width - r):
-            # Obtencion de la intensidad del pixel (y, x)
             pixel_intensity = inImage[y, x]
             # Define una región centrada en (y, x)
             region = inImage[y-r:y+r+1, x-r:x+r+1]
-            # Diferencia entre la intensidad del píxel central y los píxeles de la región
             diff = np.abs(region - pixel_intensity)
             # Determinacion de diff en los píxeles dentro de la forma circular
             susan_values = circle_mask * (diff <= t)
             
             # Suma los pixeles dentro de la región que cumplen con la condición
             usan = np.sum(susan_values)
-            # Normaliza
             usanArea[y, x] = usan / max_usan 
             
             # Se resalta la esquina si cumple la condición
@@ -225,46 +221,75 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('girasol.jpeg')
-
+inImage = io.imread('imagenes-bordes/circulo.jpeg')
 inImage = black_and_white(inImage)
 
-# gx, gy = gradientImage(inImage, 'Prewitt')
+
+# COMPROBACION GRADIENTIMAGE
+gx, gy = gradientImage(inImage, 'Prewitt')
+min = np.min(gx)
+max = np.max(gx)
+gx = (gx - min) / (max - min)
+min = np.min(gy)
+max = np.max(gy)
+gy = (gy - min) / (max - min)
+saveImage(gx, 'imagenes-bordes/saved_gradientImage_gx.jpg')
+saveImage(gy, 'imagenes-bordes/saved_gradientImage_gy.jpg')
+plt.figure()
+plt.subplot(1, 3, 1)
+io.imshow(inImage, cmap='gray',vmin=0.0,vmax=1.0) 
+plt.title('Imagen entrada')
+plt.subplot(1, 3, 2)
+io.imshow(gx, cmap='gray')
+plt.title('gx')
+plt.subplot(1, 3, 3)
+io.imshow(gy, cmap='gray')
+plt.title('gy')
+plt.show()
+
+# COMRPOBACION LOG Y EDGECANNY
 # outImage = LoG(inImage, 0.5)
-outImage = edgeCanny(inImage, 0.3, 0.1, 0.8)
+# min = np.min(outImage)
+# max = np.max(outImage)
+# outImage = (outImage - min) / (max - min)
+# saveImage(outImage, 'imagenes-bordes/saved_LoG.jpg')
+
+# outImage = edgeCanny(inImage, 0.3, 0.1, 0.8)
+# saveImage(outImage, 'imagenes-bordes/saved_canny.jpg')
+
+# plt.figure()
+# plt.subplot(1, 2, 1)
+# io.imshow(inImage, cmap='gray') 
+# plt.title('Imagen de entrada')
+# plt.subplot(1, 2, 2)
+# io.imshow(outImage, cmap='gray')
+# plt.title('Imagen resultante')
+# plt.show()
+
+# COMPROBACION CORNERSUSAN
 # radius = 10
 # threshold = 0.6
 # corners, usan_area = cornerSusan(inImage, radius, threshold)
-
-# saveImage(outImage, 'imagenes-bordes/imagen_guardada_circle12.jpg')
-
-# Visualizar cornerSusan
+# min = np.min(corners)
+# max = np.max(corners)
+# corners = (corners - min) / (max - min)
+# min = np.min(usan_area)
+# max = np.max(usan_area)
+# usan_area = (usan_area - min) / (max - min)
+# saveImage(corners, 'imagenes-bordes/saved_susan_corners.jpg')
+# saveImage(usan_area, 'imagenes-bordes/saved_susan_area.jpg')
 # plt.figure(figsize=(8, 6))
-
 # plt.subplot(1, 3, 1)
 # plt.imshow(inImage, cmap='gray')
 # plt.title('Imagen original')
 # plt.axis('off')
-
 # plt.subplot(1, 3, 2)
 # plt.imshow(corners, cmap='gray')
 # plt.title('Mapa de esquinas')
 # plt.axis('off')
-
 # plt.subplot(1, 3, 3)
 # plt.imshow(usan_area, cmap='gray')
 # plt.title('usanArea')
 # plt.axis('off')
-
 # plt.tight_layout()
 # plt.show()
-
-# Visualizar 
-plt.figure()
-plt.subplot(1, 2, 1)
-io.imshow(inImage, cmap='gray') 
-plt.title('Imagen de entrada')
-plt.subplot(1, 2, 2)
-io.imshow(outImage, cmap='gray')
-plt.title('Imagen resultante')
-plt.show()
