@@ -88,7 +88,7 @@ def saveImage(image, filename):
     io.imsave(filename, scaled_image)
 
 # ENTRADA
-inImage = io.imread('imagenes-conv/gato.jpeg')
+inImage = io.imread('grid.png')
 # img_input_bw = np.zeros([150,150])
 # img_input_bw[60,60] = 1
 # kernel = io.imread('imagenes-conv/kernel.jpg')
@@ -116,20 +116,22 @@ img_input_bw = black_and_white(inImage)
 # plt.show()
 
 # COMPROBACION FILTERIMAGE
-outImage = filterImage(img_input_bw, kernel_bw)
+# outImage = filterImage(img_input_bw, kernel_bw)
 
 # COMPROBACION GAUSSIANFILTER
 # sigma = 5
 # outImage = gaussianFilter(img_input_bw,sigma)
 
 # COMPROBACION MEDIANFILTER
-# outImage = medianFilter(img_input_bw, 15)
+# outImage = medianFilter(img_input_bw, 3)
+# outImage = medianFilter(img_input_bw, 5)
+outImage = medianFilter(img_input_bw, 7)
 
 # GUARDAR IMAGEN
 # min = np.min(outImage)
 # max = np.max(outImage)
 # outImage = (outImage - min) / (max - min)
-saveImage(outImage, 'imagenes-conv/saved_filterImage.jpg')
+saveImage(outImage, 'imagenes-conv/saved_filterImage_3.jpg')
 
 
 # Mostrar imágenes

@@ -105,7 +105,7 @@ def saveImage(image, filename):
     scaled_image = (image * 255).astype(np.uint8)
     io.imsave(filename, scaled_image)
 
-inImage = io.imread('imagenes-morf/animo-xoel.jpeg')
+inImage = io.imread('morph.png')
 inImage = black_and_white(inImage)
 umbral = 0.5 
 inImage_binary = (inImage > umbral).astype(float)
@@ -118,54 +118,54 @@ inImage_binary = (inImage > umbral).astype(float)
 #               [0, 1, 0, 0, 0, 0]], dtype=np.float32)
 # SE = np.array([[1, 1]], dtype=np.float32)
 
-SE = np.array([[0, 0, 0, 0, 0, 0],
-              [0, 1, 1, 1, 1, 0],
-              [0, 1, 1, 1, 1, 0],
-              [0, 1, 1, 1, 1, 0],
-              [0, 0, 0, 0, 0, 0]], dtype=np.float32)
+# SE = np.array([[0, 0, 0, 0, 0, 0],
+#               [0, 1, 1, 1, 1, 0],
+#               [0, 1, 1, 1, 1, 0],
+#               [0, 1, 1, 1, 1, 0],
+#               [0, 0, 0, 0, 0, 0]], dtype=np.float32)
 
 # SE = np.array([[1, 1, 1],
 #                [1, 1, 1],
 #                [1, 1, 1]])
 # SE = np.array([[0, 0, 1, 1, 1, 0, 0]])
 
-outImageErode = erode(inImage_binary, SE)
-outImageDilate = dilate(inImage_binary, SE)
-outImageOpened = opening(inImage_binary, SE)
-outImageClosed = closing(inImage_binary, SE)
+# outImageErode = erode(inImage_binary, SE)
+# outImageDilate = dilate(inImage_binary, SE)
+# outImageOpened = opening(inImage_binary, SE)
+# outImageClosed = closing(inImage_binary, SE)
 
-saveImage(outImageErode, 'imagenes-morf/saved_erode.jpg')
-saveImage(outImageDilate, 'imagenes-morf/saved_dilate.jpg')
-saveImage(outImageOpened, 'imagenes-morf/saved_opening.jpg')
-saveImage(outImageClosed, 'imagenes-morf/saved_closing.jpg')
+# saveImage(outImageErode, 'imagenes-morf/saved_erode.jpg')
+# saveImage(outImageDilate, 'imagenes-morf/saved_dilate.jpg')
+# saveImage(outImageOpened, 'imagenes-morf/saved_opening.jpg')
+# saveImage(outImageClosed, 'imagenes-morf/saved_closing.jpg')
 
-plt.figure(figsize=(15, 6))
-plt.subplot(2, 3, 1)
-plt.title('Imagen de entrada')
-io.imshow(inImage_binary, cmap='gray')
-plt.subplot(2, 3, 2)
-plt.title('Erosión')
-io.imshow(outImageErode, cmap='gray')
-plt.subplot(2, 3, 3)
-plt.title('Dilatación')
-io.imshow(outImageDilate, cmap='gray')
-plt.subplot(2, 3, 4)
-plt.title('Apertura')
-io.imshow(outImageOpened, cmap='gray')
-plt.subplot(2, 3, 5)
-plt.title('Cierre')
-io.imshow(outImageClosed, cmap='gray')
-plt.tight_layout()
-plt.show()
+# plt.figure(figsize=(15, 6))
+# plt.subplot(2, 3, 1)
+# plt.title('Imagen de entrada')
+# io.imshow(inImage_binary, cmap='gray')
+# plt.subplot(2, 3, 2)
+# plt.title('Erosión')
+# io.imshow(outImageErode, cmap='gray')
+# plt.subplot(2, 3, 3)
+# plt.title('Dilatación')
+# io.imshow(outImageDilate, cmap='gray')
+# plt.subplot(2, 3, 4)
+# plt.title('Apertura')
+# io.imshow(outImageOpened, cmap='gray')
+# plt.subplot(2, 3, 5)
+# plt.title('Cierre')
+# io.imshow(outImageClosed, cmap='gray')
+# plt.tight_layout()
+# plt.show()
 
 # COMPROBACION HIT-OR-MISS
-# objSEj = np.array([[0, 0, 0],
-#                     [1, 1, 0],
-#                     [0, 1, 0]])
+objSEj = np.array([[1, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 0]])
 
-# bgSE = np.array([[0, 1, 1],
-#                 [0, 0, 1],
-#                 [0, 0, 0]])
+bgSE = np.array([[0, 1, 0],
+                [0, 0, 1],
+                [0, 0, 0]])
 
 # inImage_binary = np.array([[0, 0, 0, 0, 0, 0, 0],
 #                     [0, 0, 0, 1, 1, 0, 0],
@@ -175,15 +175,15 @@ plt.show()
 #                     [0, 0, 0, 1, 0, 0, 0],
 #                     [0, 0, 0, 0, 0, 0, 0]])
 
-# outImage = hit_or_miss(inImage_binary, objSEj, bgSE)
-# saveImage(outImage, 'imagenes-morf/saved_hit_or_miss.jpg')
+outImage = hit_or_miss(inImage_binary, objSEj, bgSE)
+saveImage(outImage, 'imagenes-morf/saved_hit_or_miss.jpg')
 
-# plt.figure()
-# plt.subplot(1, 2, 1)
-# plt.imshow(inImage_binary, cmap='gray', vmin=0.0, vmax=1.0)
-# plt.title('Imagen de entrada')
-# plt.subplot(1, 2, 2)
-# plt.imshow(outImage, cmap='gray', vmin=0.0, vmax=1.0)
-# plt.title('Hit or miss')
-# plt.tight_layout()
-# plt.show()
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.imshow(inImage_binary, cmap='gray', vmin=0.0, vmax=1.0)
+plt.title('Imagen de entrada')
+plt.subplot(1, 2, 2)
+plt.imshow(outImage, cmap='gray', vmin=0.0, vmax=1.0)
+plt.title('Hit or miss')
+plt.tight_layout()
+plt.show()

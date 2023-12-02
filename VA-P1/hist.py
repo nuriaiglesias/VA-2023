@@ -16,8 +16,8 @@ def adjustIntensity(inImage, inRange=None, outRange=[0, 1]):
     outImage = (((inImage - imin) / (imax - imin)) * (omax - omin)) + omin
 
     # Asegura rango de salida entre imin, imax
-    outImage[outImage < imin] = imin
-    outImage[outImage > imax] = imax
+    # outImage[outImage < imin] = imin
+    # outImage[outImage > imax] = imax
 
     return outImage
 
@@ -55,10 +55,10 @@ def black_and_white(img):
         img = color.rgb2gray(img).astype(float)
     return img
 
-inImage = io.imread('imagenes-hist/perro.jpg')
+inImage = io.imread('grays.png')
 inImageBW = black_and_white(inImage)
 
-outImage = adjustIntensity(inImageBW, outRange=[0.2, 0.3])
+outImage = adjustIntensity(inImageBW)
 # outImage = equalizeIntensity(inImageBW, nBins=256)
 
 saveImage(outImage, 'imagenes-hist/saved_equalizeIntensity.jpg')
