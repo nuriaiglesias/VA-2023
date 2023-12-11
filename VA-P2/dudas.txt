@@ -1,0 +1,13 @@
+
+POSIBILIDADES:
+
+1. Transformada de Hough: 
+ - Ventajas: Buena para objetos parametrizables
+ - Desventajas: Posibles complicaciones si la señal esta girada...
+2. Plantillas Deformables:
+ - Ventajas: Flexibilidad para adaptarse a cambios en posición/orientación
+ - Desventajas: Tendría que poner una inicialización correcta, puede requerir modelos específicos para cada forma
+
+PRIMERO DEFINO COLORES Y LUEGO VOY A POR FORMAS
+
+    busco colores rojos en la imagen - esos colores forman un triangulo? no, los deshecho - me quedo con los que formen un triangulo

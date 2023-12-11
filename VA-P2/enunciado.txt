@@ -1,0 +1,25 @@
+4. Detecci´on y reconocimiento de se˜nales de tr´afico
+Si quisi´eramos construir veh´ıculos aut´onomos que pudieran utilizar la infraestructura viaria
+actual, tendr´ıamos que dotar al sistema objetivo, entre otras cosas, de mecanismos de percepci´on de las se˜nalizaciones presentes en la v´ıa p´ublica. Este trabajo se centrar´a en la detecci´on y
+reconocimiento de un subconjunto de las se˜nales de tr´afico.
+4.1. Materiales
+Para este trabajo se utilizar´a un subconjunto de im´agenes provenientes del German Traffic
+Sign Detection Benchmark [1]. El subconjunto de im´agenes seleccionado est´a disponible en el
+moodle, aunque adicionalmente se pueden descargar m´as im´agenes de la web original si se considera
+conveniente.
+Cada imagen contiene una escena de tr´afico en ciudad o carretera, que contiene una o m´as
+se˜nales de tr´afico.
+Se proporcionan un total de 12 escenas con se˜nales variadas. La siguiente figura muestra un
+ejemplo de escena con tres se˜nales objetivo: 2 de peligro, y una de prohibici´on.
+4.2. Objetivos
+Desarrollar un m´etodo computacional que, a partir de una estas im´agenes, permita:
+1. Localizar todas las apariciones de se˜nales de tr´afico en la imagen. Solamente se consideran
+las se˜nales descritas en el siguiente punto.
+2. Identificar la categor´ıa de cada se˜nal de tr´afico detectada. Las categor´ıas contempladas son:
+Prohibici´on. Rojas y circulares, “Ceda el paso” o “STOP”.
+Peligro. Rojas y triangulares.
+Obligaci´on. Azules y circulares.
+Indicaci´on. Azules y cuadradas.
+4.3. Referencias
+[1 ] The German Traffic Sign Detection Benchmark (GTSDB)
+http:///benchmark.ini.rub.de/?section=gtsdb
