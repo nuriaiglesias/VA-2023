@@ -341,3 +341,78 @@ def check_shape_blue(contour):
         return True
     else:
         return False
+
+# 0446
+
+for contour in contours_red:
+    if check_shape_red(contour):
+        x, y, w, h = cv2.boundingRect(contour)
+        roi = image[y:y+h, x:x+w]
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+
+        _, binary_image = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
+        kernel = np.ones((3,3), np.uint8)
+        morph_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
+        morph_image = cv2.morphologyEx(morph_image, cv2.MORPH_DILATE, kernel)
+
+        contours, _ = cv2.findContours(morph_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        detected_circles = []
+
+        for circle_contour in contours:
+            area = cv2.contourArea(circle_contour)
+            if area > 300:  
+                print("circle1")
+                perimeter = cv2.arcLength(circle_contour, True)
+                approx = cv2.approxPolyDP(circle_contour, 0.3 * perimeter, True)
+                num_sides = len(approx)
+                if num_sides >= 1 and num_sides <= 3:  
+                    print("circle2")
+                    (x_c, y_c), radius = cv2.minEnclosingCircle(circle_contour)
+                    detected_circles.append((int(x_c), int(y_c), int(radius)))
+
+        for circle in detected_circles:
+            cv2.circle(detected_shapes, (x + circle[0], y + circle[1]), circle[2], (0, 255, 0), 4)
+
+        cv2.drawContours(detected_shapes, [contour], 0, (0, 0, 255), 3)
+    
+Indicaciones: en 001 este no funciona, 
+
+
+
+
+FILTRADO POR DESCARTE
+
+for contour in contours_red:
+    if check_shape_red(contour):
+        x, y, w, h = cv2.boundingRect(contour)
+        roi = image[y:y+h, x:x+w]
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+
+        _, binary_image = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
+        kernel = np.ones((3,3), np.uint8)
+        morph_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
+        morph_image = cv2.morphologyEx(morph_image, cv2.MORPH_DILATE, kernel)
+        contours, _ = cv2.findContours(morph_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        detected_circles = []
+
+        # Circles
+        for circle_contour in contours:
+            area = cv2.contourArea(circle_contour)
+            if area > 4400 and area < 4470:
+                perimeter = cv2.arcLength(circle_contour, True)
+                approx = cv2.approxPolyDP(circle_contour, 0.3 * perimeter, True)
+                num_sides = len(approx)
+                circularity = (4 * np.pi * area) / (perimeter * perimeter)
+                if num_sides >= 1 and num_sides <= 3 and circularity >= 0.1: 
+                    (x_c, y_c), radius = cv2.minEnclosingCircle(circle_contour)
+                    detected_circles.append((int(x_c), int(y_c), int(radius)))
+
+        for circle in detected_circles:
+            cv2.circle(detected_shapes, (x + circle[0], y + circle[1]), circle[2], (0, 255, 0), 4)
+
+        cv2.drawContours(detected_shapes, [contour], 0, (0, 0, 255), 3)
+
+ - Recoger la imagen binaria del color rojo/azul y comprobar el interior de las señales las formas, etc (segmentacion)
+ - mascara binaria
+
+ existe un algoritmo por el cual yo pueda elegir el umbral?
