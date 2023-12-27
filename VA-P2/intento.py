@@ -30,12 +30,10 @@ hsv[:, :, 2] = enhanced_blue.astype(np.uint8)
 enhanced_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 gray = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2GRAY)
 
-mask = cv2.inRange(hsv, lower_blue, upper_blue)
+blurred_mask_blue = cv2.GaussianBlur(mask_blue, (3, 3), 0)
 
-blurred_mask = cv2.GaussianBlur(mask, (3, 3), 0)
-
-circles = cv2.HoughCircles(
-    blurred_mask,
+circles_blue = cv2.HoughCircles(
+    blurred_mask_blue,
     cv2.HOUGH_GRADIENT_ALT,
     dp=1,
     minDist=14,
@@ -46,9 +44,9 @@ circles = cv2.HoughCircles(
 )
 
 canvas = np.zeros_like(image)
-if circles is not None:
-    circles = np.uint16(np.around(circles))
-    for circle in circles[0, :]:
+if circles_blue is not None:
+    circles_blue = np.uint16(np.around(circles_blue))
+    for circle in circles_blue[0, :]:
         x, y, r = circle
         x = np.clip(x, r, gray.shape[1] - r)
         y = np.clip(y, r, gray.shape[0] - r)
@@ -90,11 +88,11 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
  
 fig, ax = plt.subplots(1, 3, figsize=(12, 4))
-ax[0].imshow(blurred_mask)
-ax[0].set_title('Áreas Rojas detectadas')
+ax[0].imshow(blurred_mask_blue)
+ax[0].set_title('Áreas azules detectadas')
 
 ax[2].imshow(image)
-ax[2].set_title('Áreas Rojas detectadas')
+ax[2].set_title('imagen')
 
 
 for a in ax:
