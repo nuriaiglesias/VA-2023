@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 def detect_blue_circles(image_path):
     # Cargar la imagen
@@ -15,7 +16,7 @@ def detect_blue_circles(image_path):
     mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
 
     # Aplicar un aumento en la intensidad de los tonos azules
-    intensity_factor = 1.9  # Factor de aumento de intensidad (puedes ajustar este valor)
+    intensity_factor = 1.9  
     enhanced_blue = np.where(mask_blue > 0, np.clip(hsv[:, :, 2] * intensity_factor, 0, 255), hsv[:, :, 2])
 
     # Actualizar el canal V (Valor) en la imagen HSV con la intensidad aumentada
@@ -90,71 +91,71 @@ def detect_red_circles(image):
     circles_red = cv2.HoughCircles(
         blurred_mask_red,
         cv2.HOUGH_GRADIENT_ALT,
-        dp=1,
+        dp=0.1,
         minDist=6,
         param1=100,
         param2=0.1, 
         minRadius=10, 
-        maxRadius=50
+        maxRadius=49
     )
 
     original_image = np.copy(image)
     if circles_red is not None:
         circles_red = np.uint16(np.around(circles_red))
+
         for circle in circles_red[0, :]:
             x, y, r = circle
             x = np.clip(x, r, gray.shape[1] - r)
             y = np.clip(y, r, gray.shape[0] - r)
-            print("cirlce")
             roi = gray[max(0, y - r):min(gray.shape[0], y + r), max(0, x - r):min(gray.shape[1], x + r)]
-
             _, roi_threshold = cv2.threshold(roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
             if cv2.countNonZero(roi_threshold) > 0:
                 if roi_threshold.size > 0:
-                    # cv2.imshow("edges", roi_threshold)
-                    # cv2.waitKey(0) 
-                    # cv2.destroyAllWindows()
                     contours, _ = cv2.findContours(roi_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     for cnt in contours:
-
                         x_rect, y_rect, w_rect, h_rect = cv2.boundingRect(cnt)
                         aspect_ratio = w_rect / h_rect
-
                         if (aspect_ratio >= 1 and aspect_ratio <= 1.1) or aspect_ratio == 4.4 or aspect_ratio == 4.5:
-                            area = cv2.contourArea(cnt)
-                            peri = cv2.arcLength(cnt, True)
-                            approx = cv2.approxPolyDP(cnt, 0.03 * peri, True)
-
-                            roi_signal = image[max(0, y - r):min(gray.shape[0], y + r), max(0, x - r):min(gray.shape[1], x + r)]
-                            adjusted_image = cv2.convertScaleAbs(roi_signal, alpha=2.5, beta=20)
-                            white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image)
-                            if white_ratio > 10  and red_ratio > 1 and area > 0.4 and (len(approx) == 8 or len(approx) == 10 or len(approx) == 5 or len(approx) == 7 or len(approx) == 3):
-                                # cv2.imshow("edges", roi_threshold)
-                                # cv2.waitKey(0) 
-                                # cv2.destroyAllWindows()
-                                inner_circles = cv2.HoughCircles(
-                                    roi_threshold,
-                                    cv2.HOUGH_GRADIENT_ALT,
-                                    dp=1,
-                                    minDist=2,
-                                    param1=100,
-                                    param2=0.3,
-                                    minRadius=4,
-                                    maxRadius=50
-                                )
-
-                                if inner_circles is not None:
-                                    cv2.circle(original_image, (x, y), r, (0, 255, 0), 2)
+                            # height, width = image.shape[:2]
+                            # if int(height * 0.2) < y < int(height * 0.7) and int(width * 0.2) < x:
+                                area = cv2.contourArea(cnt)
+                                peri = cv2.arcLength(cnt, True)
+                                approx = cv2.approxPolyDP(cnt, 0.03 * peri, True)
+                                roi_signal = image[max(0, y - r):min(gray.shape[0], y + r), max(0, x - r):min(gray.shape[1], x + r)]
+                                adjusted_image = cv2.convertScaleAbs(roi_signal, alpha=2.3, beta=20)
+                                white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image)
+                                if white_ratio > 20 and red_ratio > 16 and area > 0.4 and (len(approx) in [3, 5, 7, 8, 10]):
+                                    inner_circles = cv2.HoughCircles(
+                                        roi_threshold,
+                                        cv2.HOUGH_GRADIENT_ALT,
+                                        dp=0.1,
+                                        minDist=3,
+                                        param1=100,
+                                        param2=0.35, 
+                                        minRadius=4,
+                                        maxRadius=19
+                                    )
+                                    if inner_circles is not None:
+                                        inner_circles = np.uint16(np.around(inner_circles))
+                                        for circle in inner_circles[0, :]:
+                                            x_inner, y_inner, r_inner = circle
+                                            x_inner = np.clip(x_inner, r_inner, gray.shape[1] - r_inner)
+                                            y_inner = np.clip(y_inner, r_inner, gray.shape[0] - r_inner)
+                                            area_inner = np.pi * (r_inner ** 2)
+                                            roi_signal_inner = image[max(0, y_inner - r_inner):min(gray.shape[0], y_inner + r_inner), max(0, x_inner - r_inner):min(gray.shape[1], x_inner + r_inner)]
+                                            adjusted_image_inner = cv2.convertScaleAbs(roi_signal_inner, alpha=2.5, beta=10)
+                                            white_ratio, _ = verificar_colores_en_roi(adjusted_image_inner)
+                                            if area_inner > 250 and white_ratio > 84:
+                                                cv2.circle(original_image, (x, y), r, (0, 255, 0), 2)
 
     return blurred_mask_red, original_image
 
 def verificar_colores_en_roi(roi):
-    white_lower = np.array([0, 0, 200])
-    white_upper = np.array([180, 30, 255])
+    white_lower = np.array([0, 0, 220])
+    white_upper = np.array([180, 50, 255])
 
-    red_lower = np.array([0, 50, 50])
-    red_upper = np.array([10, 255, 255])
+    red_lower = np.array([0, 60, 80])
+    red_upper = np.array([30, 200, 255])
 
     hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     mask_red = cv2.inRange(hsv_roi, red_lower, red_upper)
@@ -165,10 +166,61 @@ def verificar_colores_en_roi(roi):
 
     return white_pixels_percentage, red_pixels_percentage
 
-# Uso de la función para detectar círculos azules en la imagen
-image_path = "Material Señales/00446.ppm"
-detected_image_blue, image_blue = detect_blue_circles(image_path)
-detected_image_red, image_red = detect_red_circles(image_blue)
+def detect_red_triangles(image_path):
+    image = cv2.imread(image_path)
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    lower_red = np.array([0, 130, 20])
+    upper_red = np.array([10, 255, 255])
+    lower_red_strange = np.array([169, 94, 20])
+    upper_red_strange = np.array([179, 255, 255])
+
+    mask_red = cv2.inRange(hsv, lower_red, upper_red)
+    mask_red_strange = cv2.inRange(hsv, lower_red_strange, upper_red_strange)
+
+    combined_mask = cv2.bitwise_or(mask_red, mask_red_strange)
+    blurred_mask_red = cv2.GaussianBlur(combined_mask, (3, 3), 0)
+    _, blurred_threshold = cv2.threshold(blurred_mask_red, 0, 255, cv2.THRESH_BINARY )
+
+    contours, _ = cv2.findContours(blurred_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    original_image = image.copy()
+
+    for cnt in contours:
+        epsilon = 0.03 * cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, epsilon, True)
+        area = cv2.contourArea(cnt)
+
+        if (len(approx) == 3 or len(approx) == 7 or len(approx) == 6 or len(approx) == 5) and area > 610:
+            x, y, w, h = cv2.boundingRect(cnt)
+            roi_signal = image[y:y+h, x:x+w]
+            adjusted_image = cv2.convertScaleAbs(roi_signal, alpha=1.5, beta=1)
+            white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image)
+            if white_ratio > 20 and white_ratio <= 70 and red_ratio > 10 and red_ratio < 40:
+                rect = cv2.minAreaRect(cnt)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+
+                # Calcular la orientación del rectángulo delimitador
+                angle = rect[2]
+
+                # Rotar la imagen según la orientación
+                rows, cols = image.shape[:2]
+                M = cv2.getRotationMatrix2D(rect[0], angle, 1)
+                rotated_image = cv2.warpAffine(image, M, (cols, rows))
+
+                # Dibujar el contorno rotado
+                cv2.drawContours(rotated_image, [box], 0, (0, 255, 0), 3)
+
+                # Dibujar el triángulo original en la imagen original (sin rotar)
+                cv2.drawContours(original_image, [approx], 0, (0, 255, 0), 3)
+
+
+    return blurred_threshold, original_image
+
+image_path = "Material Señales/00023.ppm"
+# detected_image_blue, image_blue = detect_blue_circles(image_path)
+# detected_image_red, image_red = detect_red_circles(image_blue)
+detected_image_red, image_red = detect_red_triangles(image_path)
 
 
 # Visualizar los resultados
