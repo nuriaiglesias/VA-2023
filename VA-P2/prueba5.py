@@ -166,8 +166,7 @@ def verificar_colores_en_roi(roi):
 
     return white_pixels_percentage, red_pixels_percentage
 
-def detect_red_triangles(image_path):
-    image = cv2.imread(image_path)
+def detect_red_triangles(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     lower_red = np.array([0, 130, 20])
@@ -196,40 +195,70 @@ def detect_red_triangles(image_path):
             adjusted_image = cv2.convertScaleAbs(roi_signal, alpha=1.5, beta=1)
             white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image)
             if white_ratio > 20 and white_ratio <= 70 and red_ratio > 10 and red_ratio < 40:
-                rect = cv2.minAreaRect(cnt)
-                box = cv2.boxPoints(rect)
-                box = np.int0(box)
-
-                # Calcular la orientación del rectángulo delimitador
-                angle = rect[2]
-
-                # Rotar la imagen según la orientación
-                rows, cols = image.shape[:2]
-                M = cv2.getRotationMatrix2D(rect[0], angle, 1)
-                rotated_image = cv2.warpAffine(image, M, (cols, rows))
-
-                # Dibujar el contorno rotado
-                cv2.drawContours(rotated_image, [box], 0, (0, 255, 0), 3)
-
-                # Dibujar el triángulo original en la imagen original (sin rotar)
-                cv2.drawContours(original_image, [approx], 0, (0, 255, 0), 3)
-
+                cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
     return blurred_threshold, original_image
 
-image_path = "Material Señales/00023.ppm"
-# detected_image_blue, image_blue = detect_blue_circles(image_path)
-# detected_image_red, image_red = detect_red_circles(image_blue)
-detected_image_red, image_red = detect_red_triangles(image_path)
+def detect_blue_square(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
+    lower_blue = np.array([100, 140, 50])
+    upper_blue = np.array([124, 255, 255])
+
+    mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
+
+    blurred_mask_blue = cv2.GaussianBlur(mask_blue, (3, 3), 0)
+
+    original_image = np.copy(image)
+    
+    _, roi_threshold = cv2.threshold(blurred_mask_blue, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    contours, _ = cv2.findContours(roi_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    original_image = np.copy(image)
+
+    for cnt in contours:
+        epsilon = 0.04 * cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, epsilon, True)
+        area = cv2.contourArea(cnt)
+
+        if (len(approx) == 4 or len(approx) == 7 or len(approx) == 5) and area > 50:  #1200
+            x, y, w, h = cv2.boundingRect(cnt)
+            _, roi_threshold_internal = cv2.threshold(mask_blue[y:y+h, x:x+w], 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            roi_threshold_internal = cv2.GaussianBlur(roi_threshold_internal, (5, 5), 0)
+            internal_contours, _ = cv2.findContours(roi_threshold_internal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            for internal_cnt in internal_contours:
+                internal_approx = cv2.approxPolyDP(internal_cnt, 0.04 * cv2.arcLength(internal_cnt, True), True)
+                if len(internal_approx) == 4 or len(internal_approx) == 7 or len(internal_approx) == 3 or (len(approx) >= 1 and len(approx) <= 20):
+                    small_roi = image[y + h // 4:y + 3 * h // 4, x + w // 4:x + 3 * w // 4]
+                    small_roi_hsv = cv2.cvtColor(small_roi, cv2.COLOR_BGR2HSV)
+            
+                    lower_black = np.array([0, 0, 0])
+                    upper_black = np.array([240, 50, 80])
+
+                    mask_black = cv2.inRange(small_roi_hsv, lower_black, upper_black)
+                    
+                    if cv2.countNonZero(mask_black) > 0:
+                        cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                        cv2.putText(original_image, "Indicacion", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    return blurred_mask_blue, original_image
+
+image_path = "Material Señales/00023.ppm"
+# 235,262,001
+# fallan 262, 159, 219
+detected_image_blue, image_blue = detect_blue_circles(image_path)
+detected_image_red, image_red = detect_red_circles(image_blue)
+detected_image_red_triangles, image_red_triangles = detect_red_triangles(image_red)
+detected_image_blue_square, image_blue_square = detect_blue_square(image_red_triangles)
 
 # Visualizar los resultados
 fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-ax[0].imshow(cv2.cvtColor(image_red, cv2.COLOR_BGR2RGB))
+ax[0].imshow(cv2.cvtColor(image_blue_square, cv2.COLOR_BGR2RGB))
 ax[0].set_title('Áreas azules detectadas')
 
 # Mostrar la imagen
-ax[1].imshow(detected_image_red)
+ax[1].imshow(detected_image_blue_square)
 ax[1].set_title('Imagen')
 
 for a in ax:
