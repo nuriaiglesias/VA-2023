@@ -2,19 +2,10 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def detect_blue_circles(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    lower_blue = np.array([106, 120, 50])
-    upper_blue = np.array([130, 230, 255])
-
-    mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
-
-    blurred_mask_blue = cv2.GaussianBlur(mask_blue, (3, 3), 0)
-
     circles_blue = cv2.HoughCircles(
-        blurred_mask_blue,
+        blurred_mask_blue_circles,
         cv2.HOUGH_GRADIENT_ALT,
         dp=1,
         minDist=14,
@@ -42,28 +33,19 @@ def detect_blue_circles(image):
                         area = cv2.contourArea(cnt)
                         peri = cv2.arcLength(cnt, True)
                         approx = cv2.approxPolyDP(cnt, 0.03 * peri, True)
-                        if len(approx) == 4 or len(approx) == 5  or len(approx) == 6:
+                        if (len(approx) == 4 or len(approx) == 5 or len(approx) == 6) and (70 > area):
                             rect = cv2.minAreaRect(cnt)
                             angle = rect[2]
                             if angle >= -45 and angle <= 45 or angle == 90:
                                 cv2.circle(original_image, (x, y), r, (0, 255, 0), 2)
+                                cv2.putText(original_image, "Obligacion", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                                 
-    return mask_blue, original_image
+    return blurred_mask_blue_circles, original_image
 
 
 def detect_red_circles(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    lower_red = np.array([0, 125, 30])
-    upper_red = np.array([10, 255, 255])
-
-    mask_red = cv2.inRange(hsv, lower_red, upper_red)
-
-    blurred_mask_red = cv2.GaussianBlur(mask_red, (3, 3), 0)
-
     circles_red = cv2.HoughCircles(
-        blurred_mask_red,
+        blurred_mask_red_circles,
         cv2.HOUGH_GRADIENT_ALT,
         dp=0.1,
         minDist=6,
@@ -78,7 +60,6 @@ def detect_red_circles(image):
         circles_red = np.uint16(np.around(circles_red))
 
         for circle in circles_red[0, :]:
-            print("circle")
             x, y, r = circle
             x = np.clip(x, r, gray.shape[1] - r)
             y = np.clip(y, r, gray.shape[0] - r)
@@ -91,7 +72,7 @@ def detect_red_circles(image):
                         area = cv2.contourArea(cnt)
                         peri = cv2.arcLength(cnt, True)
                         approx = cv2.approxPolyDP(cnt, 0.03 * peri, True)
-                        roi_signal = image[max(0, y - r):min(gray.shape[0], y + r), max(0, x - r):min(gray.shape[1], x + r)]
+                        roi_signal = image[max(0, y - r):min(image.shape[0], y + r), max(0, x - r):min(image.shape[1], x + r)]
                         adjusted_image = cv2.convertScaleAbs(roi_signal, alpha=2.3, beta=20)
                         white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image) 
                         if (70 > white_ratio > 21) and (60 > red_ratio >= 25) and (850 > area >= 30) and (len(approx) in [1, 4, 8] or (len(approx) >= 6 and len(approx) <= 6.05)):
@@ -106,21 +87,20 @@ def detect_red_circles(image):
                                 maxRadius=45
                             )
                             if inner_circles is not None:
-                                print("circle")
                                 inner_circles = np.uint16(np.around(inner_circles))
                                 for circle in inner_circles[0, :]:
                                     x_inner, y_inner, r_inner = circle
                                     x_inner = np.clip(x_inner, r_inner, gray.shape[1] - r_inner)
                                     y_inner = np.clip(y_inner, r_inner, gray.shape[0] - r_inner)
                                     area_inner = np.pi * (r_inner ** 2)
-                                    roi_signal_inner = image[max(0, y_inner - r_inner):min(gray.shape[0], y_inner + r_inner), max(0, x_inner - r_inner):min(gray.shape[1], x_inner + r_inner)]
+                                    roi_signal_inner = image[max(0, y_inner - r_inner):min(image.shape[0], y_inner + r_inner), max(0, x_inner - r_inner):min(image.shape[1], x_inner + r_inner)]
                                     adjusted_image_inner = cv2.convertScaleAbs(roi_signal_inner, alpha=2.5, beta=10)
                                     white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image_inner)
                                     if (3800 > area_inner > 450) and (105 > white_ratio > 84):
                                         cv2.rectangle(original_image, (x - r, y - r), (x + r, y + r), (0, 255, 0), 2)
                                         cv2.putText(original_image, "Prohibicion", (x - 30, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    return blurred_mask_red, original_image
+    return blurred_mask_red_circles, original_image
 
 def verificar_colores_en_roi(roi):
     white_lower = np.array([0, 0, 220])
@@ -139,23 +119,10 @@ def verificar_colores_en_roi(roi):
     return white_pixels_percentage, red_pixels_percentage
 
 def detect_red_triangles(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-    lower_red = np.array([0, 125, 30])
-    upper_red = np.array([10, 255, 255])
-    lower_red_strange = np.array([175, 100, 40])
-    upper_red_strange = np.array([200, 255, 255])
-
-    mask_red = cv2.inRange(hsv, lower_red, upper_red)
-    mask_red_strange = cv2.inRange(hsv, lower_red_strange, upper_red_strange)
-
-    combined_mask = cv2.bitwise_or(mask_red, mask_red_strange)
-    blurred_mask_red = cv2.GaussianBlur(combined_mask, (3, 3), 0)
-    _, blurred_threshold = cv2.threshold(blurred_mask_red, 0, 255, cv2.THRESH_BINARY )
-
+    _, blurred_threshold = cv2.threshold(blurred_mask_red_triangles, 0, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(blurred_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
     original_image = image.copy()
-
     for cnt in contours:
         epsilon = 0.03 * cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, epsilon, True)
@@ -167,28 +134,34 @@ def detect_red_triangles(image):
             adjusted_image = cv2.convertScaleAbs(roi_signal, alpha=1.5, beta=1)
             white_ratio, red_ratio = verificar_colores_en_roi(adjusted_image)
             if white_ratio > 20 and white_ratio <= 70 and red_ratio > 10 and red_ratio < 40:
+                red_upper, red_lower = contar_pixeles_rojos(adjusted_image)
                 cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                if red_lower > red_upper:
+                    cv2.putText(original_image, "Prohibicion", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                else:
+                    cv2.putText(original_image, "Peligro", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     return blurred_threshold, original_image
 
-def detect_blue_square(image_path):
-    image = cv2.imread(image_path)
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+def contar_pixeles_rojos(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
 
-    lower_blue = np.array([100, 140, 50])
-    upper_blue = np.array([124, 255, 255])
+    altura, _ = binary.shape[:2]
+    parte_superior = binary[0:altura//2, :]
+    parte_inferior = binary[altura//2:altura, :]
 
-    mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
+    red_upper = cv2.countNonZero(parte_superior)
+    red_lower = cv2.countNonZero(parte_inferior)
 
-    blurred_mask_blue = cv2.GaussianBlur(mask_blue, (3, 3), 0)
+    return red_upper, red_lower
 
-    original_image = np.copy(image)
-    
-    _, roi_threshold = cv2.threshold(blurred_mask_blue, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
+def detect_blue_square(image):    
+    _, roi_threshold = cv2.threshold(blurred_mask_blue_square, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     contours, _ = cv2.findContours(roi_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
     original_image = np.copy(image)
-
     for cnt in contours:
         epsilon = 0.04 * cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, epsilon, True)
@@ -196,13 +169,13 @@ def detect_blue_square(image_path):
 
         if (len(approx) == 4 or len(approx) == 7 or len(approx) == 5) and area > 50:  #1200
             x, y, w, h = cv2.boundingRect(cnt)
-            _, roi_threshold_internal = cv2.threshold(mask_blue[y:y+h, x:x+w], 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            _, roi_threshold_internal = cv2.threshold(mask_blue_square[y:y+h, x:x+w], 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             roi_threshold_internal = cv2.GaussianBlur(roi_threshold_internal, (5, 5), 0)
             internal_contours, _ = cv2.findContours(roi_threshold_internal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
             for internal_cnt in internal_contours:
                 internal_approx = cv2.approxPolyDP(internal_cnt, 0.04 * cv2.arcLength(internal_cnt, True), True)
-                if len(internal_approx) == 4 or len(internal_approx) == 7 or len(internal_approx) == 3 or (len(approx) >= 1 and len(approx) <= 20):
+                if len(internal_approx) == 4 or len(internal_approx) == 7 or len(internal_approx) == 3 or len(approx) == 5:
                     small_roi = image[y + h // 4:y + 3 * h // 4, x + w // 4:x + 3 * w // 4]
                     small_roi_hsv = cv2.cvtColor(small_roi, cv2.COLOR_BGR2HSV)
             
@@ -212,29 +185,62 @@ def detect_blue_square(image_path):
                     mask_black = cv2.inRange(small_roi_hsv, lower_black, upper_black)
                     
                     if cv2.countNonZero(mask_black) > 0:
-                        print("hola")
                         cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
                         cv2.putText(original_image, "Indicacion", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    return blurred_mask_blue, original_image
+    return blurred_mask_blue_square, original_image
 
-image_path = "Material Señales/00262.ppm"
-detected_image_blue_square, image_blue_square = detect_blue_square(image_path)
-detected_image_blue, image_blue = detect_blue_circles(image_blue_square)
-detected_image_red, image_red = detect_red_circles(image_blue)
+def gaussian(mask):
+    return cv2.GaussianBlur(mask, (3, 3), 0)
+
+def preprocess_image(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Values for blue
+    lower_blue_circles = np.array([106, 120, 50])
+    lower_blue_square = np.array([106, 130, 50])
+    upper_blue = np.array([130, 230, 255])
+
+    # Values for red
+    lower_red = np.array([0, 125, 30])
+    upper_red = np.array([10, 255, 255])
+    lower_red_strange = np.array([175, 100, 40])
+    upper_red_strange = np.array([200, 255, 255])
+
+    mask_blue_square = cv2.inRange(hsv, lower_blue_square, upper_blue)
+    blurred_mask_blue_square = gaussian(mask_blue_square)
+
+    mask_red_triangles = cv2.inRange(hsv, lower_red, upper_red)
+    mask_red_strange = cv2.inRange(hsv, lower_red_strange, upper_red_strange)
+
+    combined_mask = cv2.bitwise_or(mask_red_triangles, mask_red_strange)
+    blurred_mask_red_triangles = gaussian(combined_mask)
+
+    mask_blue_circles = cv2.inRange(hsv, lower_blue_circles, upper_blue)
+    blurred_mask_blue_circles = gaussian(mask_blue_circles)
+
+    mask_red_circles = cv2.inRange(hsv, lower_red, upper_red)
+    blurred_mask_red_circles = gaussian(mask_red_circles)
+
+    return (
+        mask_blue_square, blurred_mask_blue_square, blurred_mask_red_triangles,
+        blurred_mask_blue_circles, blurred_mask_red_circles,
+        hsv, gray
+    )
+
+image_path = "Material Señales/00446.ppm"
+image = cv2.imread(image_path)
+(mask_blue_square, blurred_mask_blue_square, blurred_mask_red_triangles,
+    blurred_mask_blue_circles, blurred_mask_red_circles, hsv, gray
+) = preprocess_image(image)
+
+detected_image_blue, image_blue = detect_blue_circles(image)
+detected_image_blue_square, image_blue_square = detect_blue_square(image_blue)
+detected_image_red, image_red = detect_red_circles(image_blue_square)
 detected_image_red_triangles, image_red_triangles = detect_red_triangles(image_red)
 
-# Visualizar los resultados
-fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-ax[0].imshow(cv2.cvtColor(image_red_triangles, cv2.COLOR_BGR2RGB))
-ax[0].set_title('Áreas azules detectadas')
-
-# Mostrar la imagen
-ax[1].imshow(detected_image_blue)
-ax[1].set_title('Imagen')
-
-for a in ax:
-    a.axis('off')
-
-plt.tight_layout()
+plt.imshow(cv2.cvtColor(image_red_triangles, cv2.COLOR_BGR2RGB))
+plt.axis('off')
+plt.title('Result')
 plt.show()
